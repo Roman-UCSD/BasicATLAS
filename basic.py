@@ -421,8 +421,8 @@ def synthe(run, min_wl, max_wl):
 	  's_molecules': os.path.realpath(s_molecules),
 	  's_data': os.path.realpath(s_data),
 	  'synthe_suite': os.path.realpath(synthe_suite),
-	  'min_wl': str(float(min_wl)),
-	  'max_wl': str(float(max_wl)),
+	  'min_wl': "{:<10.4f}".format(float(min_wl)),
+	  'max_wl': "{:<10.4f}".format(float(max_wl)),
 	  'synthe_solar': os.path.realpath(path + '/output_synthe.out')
 	}
 	file = open(path + '/synthe_launch.com', 'w')
@@ -568,7 +568,7 @@ def atlas(run, initial_model, iterations, vturb = '2', teff = "0", gravity = "0"
 	print "Launcher created"
 	
 	# Run ATLAS
-	last_line = '[ ]+72[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+.{21}' # This regex should match the final line in the output of a successful ATLAS-9 run (72nd layer)
+	last_line = '[ ]+72[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+.+' # This regex should match the final line in the output of a successful ATLAS-9 run (72nd layer)
 	os.chdir(path)
 	os.system('source ./atlas_control_start.com')
 	
