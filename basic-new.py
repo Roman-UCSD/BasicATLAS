@@ -130,12 +130,8 @@ def bolometry(run, mag = -1.0, std_spectrum = default_vega):
 	print "Zero-points for filters can be specified in the first line of the transmission file between <zero> and </zero>"
 	print std_spectrum, "was used as the standard Vega spectrum. The third argument can be used to specify a different standard."
 
-def visualize_spectrum(run, width = 800, height = 100):
-	"""
-	Render a PNG visualization of the spectrum, previously generated in run "run" using SYNTHE. The width
-	and the height arguments specify the desired dimensions of the image in pixels. Relies on an external script
-	"wavelength.py", featuring a function to convert a wavelength of visible light into RGB.
-	"""
+def visualize_spectrum(run, width, height):
+	print png.__file__
 	# Check that the SYNTHE run exists
 	path = 'run_' + run
 	if not (os.path.isfile(path + '/spectrum.dat')):
@@ -182,9 +178,7 @@ def visualize_spectrum(run, width = 800, height = 100):
 def show_models(pickone = False, teff = "0", gravity = "0"):
 	""" Show all available initial ATLAS-9 models
 	    If pickone is True, instead of showing the models, the function will choose one that is closest
-		to the current settings and return it. If the optional arguments, "teff" and "gravity" are provided,
-		the search for the closest model will be done for the given values of effective temperature and gravity
-		instead of the ones saved in the settings. The metallicity will still be taken from the settings regardless.
+		to the current settings and return it.
 	"""
 	if (not pickone):
 		print ""
@@ -244,7 +238,7 @@ def show_models(pickone = False, teff = "0", gravity = "0"):
 	return
 
 def initialize(run = -1):
-	""" Create a new directory to store all the output """
+	# Create a new directory to store all the output
 	if run == -1:
 		run = str(random.randint(1000, 9999))
 	path = 'run_' + run
@@ -255,7 +249,6 @@ def initialize(run = -1):
 	return
 
 def dfsynthe(run):
-	""" Generate opacity distribution tables for the current abundances saved in the settings and save in the run directory """
 	startTime = datetime.now()
 
     # Standard temperatures
@@ -350,7 +343,6 @@ def dfsynthe(run):
 	print "Finished running DFSYNTHE in", datetime.now() - startTime, "s" 
 
 def kapparos(run):
-	""" Generate Rosseland mean opacities for the current abundances saved in the settings and save in the run directory """
 	# Standard turbulent velocities
 	vs = ['0', '1', '2', '4', '8']
 	
@@ -393,9 +385,6 @@ def kapparos(run):
 	print "Merged all velocities in a single table. Final output saved in kappa.ros"
 
 def synthe(run, min_wl, max_wl):
-	""" Run SYNTHE and save the results in spectrum.dat
-        The spectrum is computed between min_wl and max_wl
-	"""
 	startTime = datetime.now()
 
 	# Check that the ATLAS-9 run exists
@@ -457,271 +446,183 @@ def atlas_converged(python_path, path, output):
 	"""
 	time.sleep(5)           # Wait a little to make sure the file system had enough time to respond
 	os.chdir(python_path)
-	# Read the main output file
 	file = open(output, 'r')
 	convergence = file.read()
 	file.close()
-	# Find the table with convergence parameters of the last iteration. The table would contain the word "TEFF" somewhere
-	# in its header. It would also be the last thing in the output file, so it is safe to assume that the lines following
-	# the last mention of "TEFF" in the file are the table we need.
 	file = open(path + '/output_last_iteration.out', 'w')
-	
-	# The table is generally space-separated, but negative signs can occasionally overflow the columns and replace the separating
-	# spaces, which will confuse np.loadtxt() that I intend to use later. We want to replace all "-" with " -" to ensure that there
-	# is a space in front of every number. However, "-" are also present in the scientific notation (e.g. 1.0E-10), which do not need
-	# to be replaced. My bodge here is to first replace all exponents with something temporary that does not contain "-" (in my case, "E="),
-	# then replace all "-" with " -" and finally bring all the exponents back.
 	s = convergence[convergence.rfind('TEFF'):].replace('E-', 'E=')
 	s = s.replace('-', ' -')
-	s = s.replace('E=', 'E-')
-	
-	# If numbers are too large, they get replaced with "*********", which can also confuse np.loadtxt(). Here, we replace all those masked
-	# numbers with the maximum supported number (99999.999). We are not introducing any errors here, because those numbers are only used to
-	# test for convergence and whether the number is 99999.999 or something larger does not matter, as both indicate non-convergence.
 	s = s.replace('*********', '99999.999')
 	s = s.replace('E=', 'E-')
-	
-	# Finally,  we run the two regular expression searches below to fix excessively long numbers that are clashing with each other. We use the
-	# fact that ATLAS always outputs 3 decimal places of precision and two digits in the exponent.
 	s = re.sub('(\.[0-9]{3})([0-9])', r'\1 \2', s)
 	s = re.sub('(E.[0-9]{2})', r'\1 ', s)
 	file.write(s)
 	file.close()
-	
-	# Now that the last iteration table is properly formatted and available in a separate file, we can simply read it with np.loadtxt()
-	# and get the convergence parameters.
 	err, de = np.loadtxt(path + '/output_last_iteration.out', skiprows = 3, unpack = True, usecols = [11, 12])
 	os.chdir(path)
 	return err, de
 
 def atlas(run, initial_model, iterations, vturb = '2', teff = "0", gravity = "0"):
-	""" Run ATLAS-9 and save the results in model.dat
-	    initial_model: the filename of the initial model in the initial models directory, "auto" for automatic.
-		iterations:    total number of iterations to run. 0 for automatic
-		vturb:         turbulent velocity in km/s. Must match the ODF provided.
-		teff, gravity: use those values for effective temperature and gravity when provided instead of the settings.
-		               This is primarily introduced for parallel processing (e.g. using TORQUE), where multiple instances
-					   of ATLAS are running simultaneously on the same settings file, but with different temperatures and gravities.
-	"""
-	startTime = datetime.now()
-	
-	# Validate vturb
-	vturb = str(int(vturb))
-	if int(vturb) not in [0, 1, 2, 4, 8]:
-		print "The Vturb value given ({}) does not appear to be valid. Vturb must be one of 0, 1, 2, 4 or 8 km/s".format(vturb)
-		return
-	print "Computation will be done for Vturb {} km/s".format(vturb)
-	print "It is assumed (but not verified!) that a compatible ODF table is provided"
-	
-	# Check that the DFSYNTHE and KAPPAROS runs exist
-	path = 'run_' + run
-	if not (os.path.isfile(path + '/odf_1.ros') and os.path.isfile(path + '/odf_9.bdf')):
-		print "Cannot find the run!"
-		return
-	
-	# Check that the initial model is set
-	if (initial_model == 'auto'):
-		initial_model = show_models(True, teff, gravity)
-		print "Automatically chosen initial model:", initial_model
-	found = False
-	files = glob.glob(atlas_init)
-	for file in files:
-		if file.find(initial_model) == len(file) - len(initial_model):
-			initial_model = file
-			found = True
-			break
-	if not found:
-		print "Cannot find the initial model!"
-		return
-	
-	# Generate a launcher command file
-	config = settings.atlas_settings()
-	if teff != "0":
-		config['teff'] = teff
-	if gravity != "0":
-		config['gravity'] = gravity
-	cards = {
-	  'kapp00': os.path.realpath(kapp00),
-	  'p00big2': os.path.realpath(p00big2),
-	  'molecules': os.path.realpath(molecules),
-	  'initial_model': os.path.realpath(initial_model),
-	  'output_1': os.path.realpath(path + '/output_main.out'),
-	  'output_2': os.path.realpath(path + '/output_summary.out'),
-	  'atlas_exe': os.path.realpath(atlas_exe),
-	  'abundance_scale': str(float(config['abundance_scale'])),
-	  'teff': str(float(config['teff'])),
-	  'gravity': str(float(config['gravity'])),
-	  'vturb': vturb,
-	}
-	for z, abundance in enumerate(config['elements']):
-		cards['element_' + str(z)] = str(float(abundance))
-	cards.update({'iterations': templates.atlas_iterations.format(iterations = '15') * int(np.floor(int(iterations) / 15))})
-	if int(iterations) % 15 != 0:
-		cards['iterations'] += templates.atlas_iterations.format(iterations = str(int(iterations) % 15))
-	file = open(path + '/atlas_control_start.com', 'w')
-	file.write(templates.atlas_control_start.format(**cards))
-	file.close()
-	file = open(path + '/atlas_control.com', 'w')
-	file.write(templates.atlas_control.format(**cards))
-	file.close()
-	file = open(path + '/atlas_control_end.com', 'w')
-	file.write(templates.atlas_control_end.format(**cards))
-	file.close()
-	print "Launcher created"
-	
-	# Run ATLAS
-	last_line = '[ ]+72[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+.+' # This regex should match the final line in the output of a successful ATLAS-9 run (72nd layer)
-	os.chdir(path)
-	os.system('source ./atlas_control_start.com')
-	
-	# We will allow 20 minutes of processing for every 15 iterations before automatic timeout.
-	# This should be more than enough.
-	if (int(iterations) == 0):
-		timeout = 1200
-	else:
-		timeout = int(1200 * int(iterations) / 15.0)
-	process = pexpect.spawnu(cards['atlas_exe'], timeout = timeout)  # Launch the ATLAS executable
-	process.logfile = open(cards['output_1'], "w")                   # Direct the output into a file
-	# For a manual number of iterations, atlas_control.com will contain everything we want to feed into ATLAS (except the termination command, "END").
-	# For an automatic number of iterations, we still want to run everything that is in this file, but we will have to iterate manually in the end.
-	with open('./atlas_control.com') as f:
-		content = f.readlines()
-	# Feed every line from the file into the running instance of ATLAS
-	for line in content:
-		line = line.rstrip("\n\r")
-		if line == '':
-			continue
-		process.sendline(line)
-	if (int(iterations) == 0):
-		print "Starting automatic iterations..."
-		# Do 15 iterations
-		process.send(templates.atlas_iterations.format(iterations = 15))
-		# Wait for ATLAS to begin the last of the 15 iterations
-		process.expect(unicode('ITERATION 15'))
-		# Wait for ATLAS to end the 15th iteration
-		process.expect(unicode(last_line))
-		# Check for covergence
-		err, de = atlas_converged(python_path, path, cards['output_1'])
-		print "15 iterations completed: max[abs(err)] =", np.max(np.abs(err)), "| max[abs(de)] =", np.max(np.abs(de))
-		max_i = 30
-		i = 0
-		# Keep going until converged, or until some limit is reached
-		while (np.max(np.abs(err)) > 1) or (np.max(np.abs(de)) > 10):
-			i += 1
-			if i == max_i:
-				print "Exceeded the maximum number of iterations ;("
-				break
-			process.send(templates.atlas_iterations.format(iterations = 15))
-			process.expect(unicode('ITERATION 15'))
-			process.expect(unicode(last_line))
-			err_old = np.max(np.abs(err))
-			de_old = np.max(np.abs(de))
-			err, de = atlas_converged(python_path, path, cards['output_1'])
-			print str(i * 15 + 15) + " iterations completed: max[abs(err)] =", np.max(np.abs(err)), "| max[abs(de)] =", np.max(np.abs(de))
-			if (err_old - np.max(np.abs(err)) + de_old - np.max(np.abs(de))) < 0.1 and (i > 10):
-				print "The model is unlikely to converge any better ;("
-				break
-		process.logfile = None   # This is necessary, so that our "END" does not show up in the output.
-	# Terminate ATLAS
-	process.sendline('END')
-	process.expect(pexpect.EOF)
-	print "ATLAS-9 halted"
-	
-	os.system('source ./atlas_control_end.com')
-	os.chdir(python_path)
-	if not (os.path.isfile(cards['output_1']) and os.path.isfile(cards['output_2'])):
-		print "ATLAS-9 did not output expected files"
-		return
+    """ Run ATLAS-9 and save the results in model.dat
+        initial_model: the filename of the initial model in the initial models directory, "auto" for automatic.
+        iterations:    total number of iterations to run. 0 for automatic
+        vturb:         turbulent velocity in km/s. Must match the ODF provided.
+        teff, gravity: use those values for effective temperature and gravity when provided instead of the settings.
+                       This is primarily introduced for parallel processing (e.g. using TORQUE), where multiple instances
+                       of ATLAS are running simultaneously on the same settings file, but with different temperatures and gravities.
+    """
+    startTime = datetime.now()
+    
+    # Validate vturb
+    vturb = str(int(vturb))
+    if int(vturb) not in [0, 1, 2, 4, 8]:
+        print "The Vturb value given ({}) does not appear to be valid. Vturb must be one of 0, 1, 2, 4 or 8 km/s".format(vturb)
+        return
+    print "Computation will be done for Vturb {} km/s".format(vturb)
+    print "It is assumed (but not verified!) that a compatible ODF table is provided"
+    
+    # Check that the DFSYNTHE and KAPPAROS runs exist
+    path = 'run_' + run
+    if not (os.path.isfile(path + '/odf_1.ros') and os.path.isfile(path + '/odf_9.bdf')):
+        print "Cannot find the run!"
+        return
+    
+    # Check that the initial model is set
+    if (initial_model == 'auto'):
+        initial_model = show_models(True, teff, gravity)
+        print "Automatically chosen initial model:", initial_model
+    found = False
+    files = glob.glob(atlas_init)
+    for file in files:
+        if file.find(initial_model) == len(file) - len(initial_model):
+            initial_model = file
+            found = True
+            break
+    if not found:
+        print "Cannot find the initial model!"
+        return
+    
+    # Generate a launcher command file
+    config = settings.atlas_settings()
+    if teff != "0":
+        config['teff'] = teff
+    if gravity != "0":
+        config['gravity'] = gravity
+    cards = {
+      'kapp00': os.path.realpath(kapp00),
+      'p00big2': os.path.realpath(p00big2),
+      'molecules': os.path.realpath(molecules),
+      'initial_model': os.path.realpath(initial_model),
+      'output_1': os.path.realpath(path + '/output_main.out'),
+      'output_2': os.path.realpath(path + '/output_summary.out'),
+      'atlas_exe': os.path.realpath(atlas_exe),
+      'abundance_scale': str(float(config['abundance_scale'])),
+      'teff': str(float(config['teff'])),
+      'gravity': str(float(config['gravity'])),
+      'vturb': vturb,
+    }
+    for z, abundance in enumerate(config['elements']):
+        cards['element_' + str(z)] = str(float(abundance))
+    cards.update({'iterations': templates.atlas_iterations.format(iterations = '15') * int(np.floor(int(iterations) / 15))})
+    if int(iterations) % 15 != 0:
+        cards['iterations'] += templates.atlas_iterations.format(iterations = str(int(iterations) % 15))
+    file = open(path + '/atlas_control_start.com', 'w')
+    file.write(templates.atlas_control_start.format(**cards))
+    file.close()
+    file = open(path + '/atlas_control.com', 'w')
+    file.write(templates.atlas_control.format(**cards))
+    file.close()
+    file = open(path + '/atlas_control_end.com', 'w')
+    file.write(templates.atlas_control_end.format(**cards))
+    file.close()
+    print "Launcher created"
+    
+    # Run ATLAS
+    last_line = '[ ]+72[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[- ]+.+' # This regex should match the final line in the output of a successful ATLAS-9 run (72nd layer)
+    os.chdir(path)
+    os.system('source ./atlas_control_start.com')
+    
+    # We will allow 20 minutes of processing for every 15 iterations before automatic timeout.
+    # This should be more than enough.
+    if (int(iterations) == 0):
+        timeout = 1200
+    else:
+        timeout = int(1200 * int(iterations) / 15.0)
+    process = pexpect.spawnu(cards['atlas_exe'], timeout = timeout)  # Launch the ATLAS executable
+    process.logfile = open(cards['output_1'], "w")                   # Direct the output into a file
+    # For a manual number of iterations, atlas_control.com will contain everything we want to feed into ATLAS (except the termination command, "END").
+    # For an automatic number of iterations, we still want to run everything that is in this file, but we will have to iterate manually in the end.
+    with open('./atlas_control.com') as f:
+        content = f.readlines()
+    # Feed every line from the file into the running instance of ATLAS
+    for line in content:
+        line = line.rstrip("\n\r")
+        if line == '':
+            continue
+        process.sendline(line)
+    if (int(iterations) == 0):
+        print "Starting automatic iterations..."
+        # Do 15 iterations
+        process.send(templates.atlas_iterations.format(iterations = 15))
+        # Wait for ATLAS to begin the last of the 15 iterations
+        process.expect(unicode('ITERATION 15'))
+        # Wait for ATLAS to end the 15th iteration
+        process.expect(unicode(last_line))
+        # Check for covergence
+        err, de = atlas_converged(python_path, path, cards['output_1'])
+        print "15 iterations completed: max[abs(err)] =", np.max(np.abs(err)), "| max[abs(de)] =", np.max(np.abs(de))
+        max_i = 30
+        i = 0
+        # Keep going until converged, or until some limit is reached
+        while (np.max(np.abs(err)) > 1) or (np.max(np.abs(de)) > 10):
+            i += 1
+            if i == max_i:
+                print "Exceeded the maximum number of iterations ;("
+                break
+            process.send(templates.atlas_iterations.format(iterations = 15))
+            process.expect(unicode('ITERATION 15'))
+            process.expect(unicode(last_line))
+            err_old = np.max(np.abs(err))
+            de_old = np.max(np.abs(de))
+            err, de = atlas_converged(python_path, path, cards['output_1'])
+            print str(i * 15 + 15) + " iterations completed: max[abs(err)] =", np.max(np.abs(err)), "| max[abs(de)] =", np.max(np.abs(de))
+            if (err_old - np.max(np.abs(err)) + de_old - np.max(np.abs(de))) < 0.1 and (i > 10):
+                print "The model is unlikely to converge any better ;("
+                break
+        process.logfile = None   # This is necessary, so that our "END" does not show up in the output.
+    # Terminate ATLAS
+    process.sendline('END')
+    process.expect(pexpect.EOF)
+    print "ATLAS-9 halted"
+    
+    os.system('source ./atlas_control_end.com')
+    os.chdir(python_path)
+    if not (os.path.isfile(cards['output_1']) and os.path.isfile(cards['output_2'])):
+        print "ATLAS-9 did not output expected files"
+        return
 
-	# Check convergence
-	err, de = atlas_converged(python_path, path, cards['output_1'])
-	print ""
-	print "Final convergence: max[abs(err)] =", np.max(np.abs(err)), "| max[abs(de)] =", np.max(np.abs(de))
-	if (np.max(np.abs(err)) > 1) or (np.max(np.abs(de)) > 10):
-		print "Failed to converge"
-	
-	# Save data in a NumPy friendly format
-	os.chdir(python_path)
-	file = open(path + '/output_summary.out', 'r')
-	data = file.read()
-	file.close()
-	file = open(path + '/model.dat', 'w')
-	file.write(data[data.rfind('RHOX'):data.rfind('PRADK')])
-	file.close()
-	data = np.loadtxt(path + '/model.dat', unpack = True, skiprows = 1, usecols = [0, 1, 2])
-	data[2] = 0.000001 * data[2]    # Bars conversion
-	np.savetxt(path + '/model.dat', data.T, delimiter = ',', header = 'Mass Column Density [g cm^-2],Temperature [K],Pressure [Bar]')
-	print "Saved the model in model.dat"
-	
-	print "Finished running ATLAS-9 in", datetime.now() - startTime, "s" 
-	return
-
-	
-def test_setup():
-	""" Automatic detection of issues with the ATLAS/SYNTHE setup. The function will check that all the necessary files
-	    are in place and the command line environment is appropriate. If the function runs with no output, everything is good
-		to go. Otherwise, identified problems will be shown.
-	"""
-	files = {}
-	# Supporting Python scripts
-	files[0] = ['settings.py', 'templates.py', 'wavelength.py']
-	# ATLAS files
-	files[1] = [molecules]
-	# SYNTHE files
-	files[2] = np.core.defchararray.add(s_data + '/', ['continua.dat', 'fchighlines.bin', 'fclowlines.bin', 'he1tables.dat', 'molecules.dat'])
-	# DFSYNTHE files
-	files[3] = np.core.defchararray.add(d_data + '/', ['continua.dat', 'molecules.dat', 'pfiron.dat', 'repacked_lines/diatomicsdf.bin',
-	                                                   'repacked_lines/h2olinesdf.bin', 'repacked_lines/highlinesdf.bin',
-													   'repacked_lines/lowlinesdf.bin', 'repacked_lines/nltelinesdf.bin', 'repacked_lines/tiolinesdf.bin'])
-	# SYNTHE molecules
-	files[4] = np.core.defchararray.add(s_molecules + '/', ['c2ax.asc', 'c2ba.asc', 'c2ba.dat', 'c2da.dat', 'c2dabrookek.asc', 'c2ea.asc',
-	                                                        'c2ea.dat', 'chbx.dat', 'chcx.dat', 'chmasseron.asc', 'cnax.dat', 'cnaxbrookek.asc',
-															'cnbx.dat', 'cnbxbrookek.asc', 'cnxx12brooke.asc', 'coax.asc', 'coax.dat', 'coxx.asc',
-															'eschwenke.bin', 'h2.asc', 'h2bx.dat', 'h2ofastfix.bin', 'h2xx.asc', 'hdxx.asc',
-															'mgh.asc', 'mghbx.dat', 'nh.asc', 'nhax.dat', 'nhca.dat', 'ohupdate.asc', 'sihax.asc',
-															'sihax.dat', 'sioax.asc', 'sioex.asc', 'sioxx.asc', 'tioschwenke.bin', 'vo.asc',
-															'vo.readme', 'vomyt.asc'])
-	# Executables
-	files[5] = [atlas_exe]
-	files[6] = np.core.defchararray.add(synthe_suite + '/', ['broaden.exe', 'converfsynnmtoa.exe',
-	                                                        'fluxaverage1a_nmtoa.exe',
-															'rgfalllinesnew.exe', 'rh2ofast.exe', 'rmolecasc.exe', 'rotate.exe', 'rpredict.exe',
-															'rschwenk.exe', 'spectrv.exe', 'synbeg.exe', 'synthe.exe',
-															'xnfpelsyn.exe'])
-	files[7] = np.core.defchararray.add(dfsynthe_suite + '/', ['dfsortp.exe', 'dfsynthe.exe', 'kappa9.exe', 'kapreadts.exe',
-															   'separatedf.exe', 'xnfdf.exe'])
-	# Default Vega spectrum
-	files[8] = [default_vega]
-	
-	file_errors = {
-	  0: "Download from BasicATLAS repository and save in the same directory as basic.py",
-	  1: "Molecular table for ATLAS-9. Point the 'molecules' variable to it in basic.py",
-	  2: "SYNTHE file. Point 's_data' to its directory in basic.py",
-	  3: "DFSYNTHE file. Point 'd_data' to its directory in basic.py",
-	  4: "SYNTHE molecules. Point 's_molecules' to its directory in basic.py",
-	  5: "Main ATLAS-9 executable. Compile and point 'atlas_exe' to it in basic.py",
-	  6: "SYNTHE executable. Point 'synthe_suite' to its directory in basic.py",
-	  7: "DFSYNTHE executable. Point 'dfsynthe_suite' to its directory in basic.py",
-	  8: "Download from BasicATLAS repository and point 'default_vega' to it in basic.py",
-	}
-	
-	for filetype in files.keys():
-		for file in files[filetype]:
-			if not os.path.isfile(file):
-				print "{} not found: {}".format(file, file_errors[filetype])
-	
-	# Litmus test for a Linux-like shell
-	if os.popen('echo "test" | grep "test"').read().strip() != 'test':
-		print "The command line environment does not seem to understand Linux commands. On Windows, use CygWin"
-	
-	if len(glob.glob(atlas_init)) == 0:
-		"Cannot find any initial models for ATLAS-9. Point 'atlas_init' to their directory in basic.py"
-	
-	if len(glob.glob(trans_dir)) == 0:
-		"Cannot find any filter transmission functions. Point 'trans_dir' to their directory in basic.py"
-	
-	return
-
+    # Check convergence
+    err, de = atlas_converged(python_path, path, cards['output_1'])
+    print ""
+    print "Final convergence: max[abs(err)] =", np.max(np.abs(err)), "| max[abs(de)] =", np.max(np.abs(de))
+    if (np.max(np.abs(err)) > 1) or (np.max(np.abs(de)) > 10):
+        print "Failed to converge"
+    
+    # Save data in a NumPy friendly format
+    os.chdir(python_path)
+    file = open(path + '/output_summary.out', 'r')
+    data = file.read()
+    file.close()
+    file = open(path + '/model.dat', 'w')
+    file.write(data[data.rfind('RHOX'):data.rfind('PRADK')])
+    file.close()
+    data = np.loadtxt(path + '/model.dat', unpack = True, skiprows = 1, usecols = [0, 1, 2])
+    data[2] = 0.000001 * data[2]    # Bars conversion
+    np.savetxt(path + '/model.dat', data.T, delimiter = ',', header = 'Mass Column Density [g cm^-2],Temperature [K],Pressure [Bar]')
+    print "Saved the model in model.dat"
+    
+    print "Finished running ATLAS-9 in", datetime.now() - startTime, "s" 
+    return
 
 if len(sys.argv) <= 1:
 	print "Function name expected"
