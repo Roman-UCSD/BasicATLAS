@@ -282,7 +282,9 @@ def dfsynthe(run):
 	  'dfsynthe_suite': os.path.realpath(dfsynthe_suite),
 	}
 	for z, abundance in enumerate(config['elements']):
-		cards['element_' + str(z)] = str(float(abundance))
+		cards['element_' + str(z)] = str(round(float(abundance), 2))
+	cards['element_1'] = str(float(config['elements'][1]))
+	cards['element_2'] = str(float(config['elements'][2]))
 	file = open(path + '/xnfdf.com', 'w')
 	file.write(templates.xnfdf_control_start.format(**cards))
 	for dft in dfts:
@@ -371,7 +373,9 @@ def kapparos(run):
 	  'dfsynthe_suite': os.path.realpath(dfsynthe_suite),
 	}
 	for z, abundance in enumerate(config['elements']):
-		cards['element_' + str(z)] = str(float(abundance))
+		cards['element_' + str(z)] = str(round(float(abundance), 2))
+	cards['element_1'] = str(float(config['elements'][1]))
+	cards['element_2'] = str(float(config['elements'][2]))
 	print "Will run KAPPA9 for every standard turbulent velocity"
 	for i, v in enumerate(vs):
 		cards['v'] = v
@@ -490,7 +494,11 @@ def atlas_converged(python_path, path, output):
 	
 	# Now that the last iteration table is properly formatted and available in a separate file, we can simply read it with np.loadtxt()
 	# and get the convergence parameters.
-	err, de = np.loadtxt(path + '/output_last_iteration.out', skiprows = 3, unpack = True, usecols = [11, 12])
+	try:
+		err, de = np.loadtxt(path + '/output_last_iteration.out', skiprows = 3, unpack = True, usecols = [11, 12])
+	except:
+		err = 99999.999
+		de = 99999.999
 	os.chdir(path)
 	return err, de
 
@@ -554,7 +562,9 @@ def atlas(run, initial_model, iterations, vturb = '2', teff = "0", gravity = "0"
 	  'vturb': vturb,
 	}
 	for z, abundance in enumerate(config['elements']):
-		cards['element_' + str(z)] = str(float(abundance))
+		cards['element_' + str(z)] = str(round(float(abundance), 2))
+	cards['element_1'] = str(float(config['elements'][1]))
+	cards['element_2'] = str(float(config['elements'][2]))
 	cards.update({'iterations': templates.atlas_iterations.format(iterations = '15') * int(np.floor(int(iterations) / 15))})
 	if int(iterations) % 15 != 0:
 		cards['iterations'] += templates.atlas_iterations.format(iterations = str(int(iterations) % 15))
@@ -570,7 +580,7 @@ def atlas(run, initial_model, iterations, vturb = '2', teff = "0", gravity = "0"
 	print "Launcher created"
 	
 	# Run ATLAS
-	last_line = '[ ]+72[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+.+' # This regex should match the final line in the output of a successful ATLAS-9 run (72nd layer)
+	last_line = '[ ]+72[- ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+.+' # This regex should match the final line in the output of a successful ATLAS-9 run (72nd layer)
 	os.chdir(path)
 	os.system('source ./atlas_control_start.com')
 	
