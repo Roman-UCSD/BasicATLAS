@@ -580,7 +580,7 @@ def atlas(run, initial_model, iterations, vturb = '2', teff = "0", gravity = "0"
 	print "Launcher created"
 	
 	# Run ATLAS
-	last_line = '[ ]+72[- ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+.+' # This regex should match the final line in the output of a successful ATLAS-9 run (72nd layer)
+	last_line = '[ ]+72[- ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+([^\n ]+[ ]+.+|[0-9-]+\.[0-9-]+\.[0-9-]+)' # This regex should match the final line in the output of a successful ATLAS-9 run (72nd layer)
 	os.chdir(path)
 	os.system('source ./atlas_control_start.com')
 	
