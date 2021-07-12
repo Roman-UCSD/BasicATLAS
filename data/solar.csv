@@ -1,0 +1,118 @@
+# Standard (nearly-solar) abundances of elements in stars
+#
+# Abundances are defined following the standard astronomical convention:
+#     "abundance of A" = log10("Number density of A"/"Number density of H") + 12.00
+#
+# Sources:
+#    0: No abundance available (abunance set to -99.99,-99.99 by default)
+#    1: The hydrogen abundance is 12.00 by definition
+#    2: Helium abundance in a protostar using the standard solar model from Christensen-Dalsgaard 1998 (1998SSRv...85...19C)
+#    3: Present day spectroscopic photospheric abundances from Asplund+2009 (2009ARA&A..47..481A), table I
+#    4: Meteoritic abundances from Asplund+2009 (2009ARA&A..47..481A), table I
+#    5: Present day indirect photospheric abundances from Asplund+2009 (2009ARA&A..47..481A), table I (see section 3.6 for details)
+#    6: Present day spectroscopic photospheric abundances from Caffau+2011 (2011SoPh..268..255C), table V (using CO5BOLD 3D model of the solar atmosphere)
+#    7: Present day spectroscopic photospheric abundance of zirconium from Caffau+2011 (2011AN....332..128C)
+#    8: Present day spectroscopic photospheric abundance of neon from Takeda+2010 (2010PASJ...62.1239T)
+#    9: Meteoritic abundance of Li from Asplund+2009 (2009ARA&A..47..481A), table I
+#
+#
+# Atomic number, Atomic weight, Abundance, Error, Source, Symbol, Name
+1,1.00797,12,0,1,H,Hydrogen
+2,4.0026,10.98,0,2,He,Helium
+3,6.941,3.26,0.05,4,Li,Lithium
+4,9.01218,1.38,0.09,3,Be,Beryllium
+5,10.81,2.79,0.04,4,B,Boron
+6,12.011,8.5,0.06,6,C,Carbon
+7,14.0067,7.86,0.12,6,N,Nitrogen
+8,15.9994,8.76,0.12,6,O,Oxygen
+9,18.998403,4.56,0.3,3,F,Fluorine
+10,20.179,8.02,0.09,8,Ne,Neon
+11,22.98977,6.24,0.04,3,Na,Sodium
+12,24.305,7.6,0.04,3,Mg,Magnesium
+13,26.98154,6.45,0.03,3,Al,Aluminium
+14,28.0855,7.51,0.03,3,Si,Silicon
+15,30.97376,5.46,0.04,6,P,Phosphorus
+16,32.06,7.16,0.05,7,S,Sulfur
+17,35.453,5.5,0.3,3,Cl,Chlorine
+18,39.948,6.4,0.13,5,Ar,Argon
+19,39.0983,5.11,0.09,6,K,Potassium
+20,40.08,6.34,0.04,3,Ca,Calcium
+21,44.9559,3.15,0.04,3,Sc,Scandium
+22,47.9,4.95,0.05,3,Ti,Titanium
+23,50.9415,3.93,0.08,3,V,Vanadium
+24,51.996,5.64,0.04,3,Cr,Chromium
+25,54.938,5.43,0.05,3,Mn,Manganese
+26,55.847,7.52,0.06,6,Fe,Iron
+27,58.9332,4.99,0.07,3,Co,Cobalt
+28,58.7,6.22,0.04,3,Ni,Nickel
+29,63.546,4.19,0.04,3,Cu,Copper
+30,65.38,4.56,0.05,3,Zn,Zinc
+31,69.72,3.04,0.09,3,Ga,Gallium
+32,72.59,3.65,0.1,3,Ge,Germanium
+33,74.9216,2.3,0.04,4,As,Arsenic
+34,78.96,3.34,0.03,4,Se,Selenium
+35,79.904,2.54,0.06,4,Br,Bromine
+36,83.8,3.25,0.06,5,Kr,Krypton
+37,85.4678,2.36,0.03,4,Rb,Rubidium
+38,87.62,2.87,0.07,3,Sr,Strontium
+39,88.9059,2.21,0.05,3,Y,Yttrium
+40,91.22,2.62,0.06,7,Zr,Zirconium
+41,92.9064,1.46,0.04,3,Nb,Niobium
+42,95.94,1.88,0.08,3,Mo,Molybdenum
+43,97.00,-99.99,-99.99,0,Tc,Technetium
+44,101.07,1.75,0.08,3,Ru,Ruthenium
+45,102.9055,1.06,0.04,4,Rh,Rhodium
+46,106.4,1.65,0.02,4,Pd,Palladium
+47,107.868,1.2,0.02,4,Ag,Silver
+48,112.41,1.71,0.03,4,Cd,Cadmium
+49,114.82,0.76,0.03,4,In,Indium
+50,118.69,2.04,0.1,3,Sn,Tin
+51,121.75,1.01,0.06,4,Sb,Antimony
+52,127.6,2.18,0.03,4,Te,Tellurium
+53,126.9045,1.55,0.08,4,I,Iodine
+54,131.3,2.24,0.06,5,Xe,Xenon
+55,132.9054,1.08,0.02,4,Cs,Caesium
+56,137.33,2.18,0.09,3,Ba,Barium
+57,138.9055,1.1,0.04,3,La,Lanthanum
+58,140.12,1.58,0.04,3,Ce,Cerium
+59,140.9077,0.72,0.04,3,Pr,Praseodymium
+60,144.24,1.42,0.04,3,Nd,Neodymium
+61,145.00,-99.99,-99.99,0,Pm,Promethium
+62,150.4,0.96,0.04,3,Sm,Samarium
+63,151.96,0.52,0.04,3,Eu,Europium
+64,157.25,1.07,0.04,3,Gd,Gadolinium
+65,158.9254,0.3,0.1,3,Tb,Terbium
+66,162.5,1.1,0.04,3,Dy,Dysprosium
+67,164.9304,0.48,0.11,3,Ho,Holmium
+68,167.26,0.92,0.05,3,Er,Erbium
+69,168.9342,0.1,0.04,3,Tm,Thulium
+70,173.04,0.92,0.02,4,Yb,Ytterbium
+71,174.967,0.1,0.09,3,Lu,Lutetium
+72,178.49,0.87,0.04,6,Hf,Hafnium
+73,180.9479,-0.12,0.04,4,Ta,Tantalum
+74,183.85,0.65,0.04,4,W,Tungsten
+75,186.207,0.26,0.04,4,Re,Rhenium
+76,190.2,1.36,0.19,6,Os,Osmium
+77,192.22,1.38,0.07,3,Ir,Iridium
+78,195.09,1.62,0.03,4,Pt,Platinum
+79,196.9665,0.8,0.04,4,Au,Gold
+80,200.59,1.17,0.08,4,Hg,Mercury
+81,204.37,0.77,0.03,4,Tl,Thallium
+82,207.2,2.04,0.03,4,Pb,Lead
+83,208.9804,0.65,0.04,4,Bi,Bismuth
+84,209.00,-99.99,-99.99,0,Po,Polonium
+85,210.00,-99.99,-99.99,0,At,Astatine
+86,222.00,-99.99,-99.99,0,Rn,Radon
+87,223.00,-99.99,-99.99,0,Fr,Francium
+88,226.00,-99.99,-99.99,0,Ra,Radium
+89,227.00,-99.99,-99.99,0,Ac,Actinium
+90,232.0381,0.08,0.03,6,Th,Thorium
+91,231.03588,-99.99,-99.99,0,Pa,Protactinium
+92,238.029,-0.54,0.03,4,U,Uranium
+93,237.00,-99.99,-99.99,0,Np,Neptunium
+94,244.00,-99.99,-99.99,0,Pu,Plutonium
+95,243.00,-99.99,-99.99,0,Am,Americium
+96,247.00,-99.99,-99.99,0,Cm,Curium
+97,247.00,-99.99,-99.99,0,Bk,Berkelium
+98,251.00,-99.99,-99.99,0,Cf,Californium
+99,252.00,-99.99,-99.99,0,Es,Einsteinium

@@ -1,154 +1,144 @@
-# This file stores the most important settings for ATLAS and SYNTHE. Edit here directly.
 import numpy as np
+from collections import OrderedDict
+import os
 
-def atlas_settings():
-	config = atlas_default_settings()
+python_path = os.path.dirname(os.path.realpath(__file__))
 
-	# Effective temperature [K] unless overridden directly
-	config['teff']             =    5400
-	# Surface gravity [log10(CGS)] unless overridden directly
-	config['gravity']          =    4.75
-	# 10^metallicity, [M/H]
-	config['abundance_scale']  =    10.0 ** (-1.4)
-	# Hydrogen number fraction
-	config['elements'][1]      =    0.8558061523714692
-	# Helium number fraction
-	config['elements'][2]      =    0.14405444583578444
-	# Abundance enhancements of individual elements ([A/M])
-	config['elements'][6]     +=    -0.65
-	config['elements'][7]     +=    +1.45
-	config['elements'][8]     +=    +0.4
-	config['elements'][10]    +=    +0.4
-	config['elements'][12]    +=    +0.4
-	config['elements'][14]    +=    +0.4
-	config['elements'][16]    +=    +0.4
-	config['elements'][18]    +=    +0.4
-	config['elements'][20]    +=    +0.4
-	config['elements'][22]    +=    +0.4
+class Settings:
+    def abun_atlas_to_std(self, elements, zscale):
+        # Get atomic numbers, weights and symbols of all chemical elements
+        Z, A = np.loadtxt(python_path + '/data/solar.csv', usecols = [0, 1], unpack = True, delimiter = ',')
+        symbol = np.loadtxt(python_path + '/data/solar.csv', usecols = [5], unpack = True, delimiter = ',', dtype = str)
 
+        # Load solar abundances
+        solar = self.abun_solar()
 
-    # Since ATLAS abundances are expressed as log10(N(A)/N(H+He)) as opposed to the traditional convention, log10(N(A)/N(H)) + 12, we must introduce a correction here
-	helium_correction = np.log10((config['elements'][1]+config['elements'][2])/config['elements'][1]) - np.log10((atlas_default_abundances()[1]+atlas_default_abundances()[2])/atlas_default_abundances()[1])
-	for i in range(3, 100):
-		if config['elements'][i] != -20.0:
-			config['elements'][i] -= helium_correction
+        abun = OrderedDict()
+        total_mass = 0.0
+        for i in range(3, 100):
+            if solar[symbol[Z == i][0]] < -90.0 and elements[i] <= -20.0:
+                atlas_abun = 0.0
+            elif solar[symbol[Z == i][0]] < -90.0 and elements[i] > -20.0:
+                raise ValueError('No solar abundance for element {}'.format(symbol[Z == i][0]))
+            else:
+                atlas_abun = np.round(elements[i] + np.log10((elements[1] + elements[2])) - np.log10(elements[1]) + 12.0 - solar[symbol[Z == i][0]], 2)
+            if atlas_abun != 0.0:
+                abun[symbol[Z == i][0]]
+            total_mass += 10 ** (atlas_abun + solar[symbol[Z == i][0]]) * A[Z == i][0]
 
-	return config
-	
-def atlas_default_settings():
-	elements = atlas_default_abundances()
-	config = {
-		'abundance_scale': 1.0000,
-		'teff':            5770.0,
-		'gravity':         4.44,
-		'elements':        elements,
-	}
-	return config
+        helium_mass = elements[2] / (elements[1] / 1e12) * A[Z == 2][0]
+        total_mass = total_mass + 1e12 * A[Z == 1][0] + helium_mass
+        Y = helium_mass / total_mass
 
-def atlas_default_abundances():
-	'''
-	  Default elemental abundances of ATLAS-9 following the convention log10(N(A)/N(H+He))
-	  See http://atmos.ucsd.edu/?p=solar for original references.
-	  Set any of the abundances to -20.0 to exclude the element
-	'''
-	elements = list(range(100))
-	elements[1] = 0.9206471640943776
-	elements[2] = 0.07824693927227462
-	elements[3] = -8.775426229703063
-	elements[4] = -10.655426229703064
-	elements[5] = -9.245426229703064
-	elements[6] = -3.535426229703064
-	elements[7] = -4.175426229703063
-	elements[8] = -3.2754262297030636
-	elements[9] = -7.475426229703063
-	elements[10] = -4.015426229703063
-	elements[11] = -5.795426229703063
-	elements[12] = -4.435426229703063
-	elements[13] = -5.585426229703063
-	elements[14] = -4.525426229703063
-	elements[15] = -6.575426229703063
-	elements[16] = -4.875426229703063
-	elements[17] = -6.535426229703063
-	elements[18] = -5.635426229703063
-	elements[19] = -6.925426229703063
-	elements[20] = -5.695426229703063
-	elements[21] = -8.885426229703063
-	elements[22] = -7.085426229703063
-	elements[23] = -8.105426229703063
-	elements[24] = -6.395426229703063
-	elements[25] = -6.605426229703063
-	elements[26] = -4.515426229703063
-	elements[27] = -7.045426229703063
-	elements[28] = -5.815426229703063
-	elements[29] = -7.845426229703063
-	elements[30] = -7.475426229703063
-	elements[31] = -8.995426229703064
-	elements[32] = -8.385426229703063
-	elements[33] = -9.735426229703062
-	elements[34] = -8.695426229703063
-	elements[35] = -9.495426229703064
-	elements[36] = -8.785426229703063
-	elements[37] = -9.675426229703064
-	elements[38] = -9.165426229703062
-	elements[39] = -9.825426229703062
-	elements[40] = -9.415426229703062
-	elements[41] = -10.575426229703062
-	elements[42] = -10.155426229703064
-	elements[43] = -20.0
-	elements[44] = -10.285426229703063
-	elements[45] = -10.975426229703062
-	elements[46] = -10.385426229703063
-	elements[47] = -10.835426229703064
-	elements[48] = -10.325426229703062
-	elements[49] = -11.275426229703063
-	elements[50] = -9.995426229703064
-	elements[51] = -11.025426229703063
-	elements[52] = -9.855426229703063
-	elements[53] = -10.485426229703062
-	elements[54] = -9.795426229703063
-	elements[55] = -10.955426229703063
-	elements[56] = -9.855426229703063
-	elements[57] = -10.935426229703063
-	elements[58] = -10.455426229703063
-	elements[59] = -11.315426229703062
-	elements[60] = -10.615426229703063
-	elements[61] = -20.0
-	elements[62] = -11.075426229703062
-	elements[63] = -11.515426229703063
-	elements[64] = -10.965426229703063
-	elements[65] = -11.735426229703062
-	elements[66] = -10.935426229703063
-	elements[67] = -11.555426229703063
-	elements[68] = -11.115426229703063
-	elements[69] = -11.935426229703063
-	elements[70] = -11.115426229703063
-	elements[71] = -11.935426229703063
-	elements[72] = -11.165426229703064
-	elements[73] = -12.155426229703062
-	elements[74] = -11.385426229703063
-	elements[75] = -11.775426229703063
-	elements[76] = -10.675426229703064
-	elements[77] = -10.655426229703064
-	elements[78] = -10.415426229703062
-	elements[79] = -11.235426229703062
-	elements[80] = -10.865426229703063
-	elements[81] = -11.265426229703063
-	elements[82] = -9.995426229703064
-	elements[83] = -11.385426229703063
-	elements[84] = -20.0
-	elements[85] = -20.0
-	elements[86] = -20.0
-	elements[87] = -20.0
-	elements[88] = -20.0
-	elements[89] = -20.0
-	elements[90] = -11.955426229703063
-	elements[91] = -20.0
-	elements[92] = -12.575426229703062
-	elements[93] = -20.0
-	elements[94] = -20.0
-	elements[95] = -20.0
-	elements[96] = -20.0
-	elements[97] = -20.0
-	elements[98] = -20.0
-	elements[99] = -20.0
-	return elements
+        return {'abun': abun, 'Y': Y, 'zscale': zscale}
+
+    def abun_std_to_atlas(self, Y = -0.1, zscale = 0.0, abun = {}):
+        """
+        Convert standard chemical abundances to the ATLAS format. Standard abundances are specified in terms
+        of the helium mass fraction (Y), metallicity ([M/H]) and enhancements of individual elements ([A/M]),
+        where [x/y] = log10(N(x) / N(y)) - log10(N(x)_solar / N(y)_solar). ATLAS abundances of hydrogen and
+        helium are provided explicitly as number fractions, while all metal abundances are provided as
+        log10(N(A)) - log10(N(H) + N(He)). ATLAS hydrogen and helium abundances are provided absolutely,
+        while ATLAS metal abundances are given before the metallicity enhancement.
+
+        While carrying out the conversion, the method uses abun_solar() to retrieve standard solar abundances
+
+        arguments:
+            Y          :         Helium mass fraction (between 0.0 and 1.0). Any number outside the valid range
+                                 loads the solar value. Defaults to -0.1 (i.e. solar)
+            zscale     :         Metallicity in dex ([M/H]). Defaults to 0.0 (solar)
+            abun       :         Enhancements of individual elements in dex ([A/M]), specified as a dictionary
+                                 keyed by chemical symbols. E.g. {'C': +0.2, 'U': -2.0}. All unspecified elements
+                                 are set to solar
+
+        returns:
+            List of ATLAS abundances with 100 elements. The 0th element is not used (set to 0.0). The rest of
+            the elements have indices corresponding to the atomic number (e.g. 1 for hydrogen)
+        """
+        # Get atomic numbers, weights and symbols of all chemical elements
+        Z, A = np.loadtxt(python_path + '/data/solar.csv', usecols = [0, 1], unpack = True, delimiter = ',')
+        symbol = np.loadtxt(python_path + '/data/solar.csv', usecols = [5], unpack = True, delimiter = ',', dtype = str)
+
+        # Load solar abundances and apply enhancements
+        solar = self.abun_solar()
+        for key in abun:
+            if key not in solar.keys():
+                raise ValueError('Unknown element: {}'.format(key))
+            if key == 'H':
+                raise ValueError('Cannot set H abundance directly: it is calculated automatically from other abundances')
+            if key == 'He':
+                raise ValueError('Cannot set He abundance directly: use helium mass fraction (Y) instead')
+            solar[key] = solar[key] + abun[key]
+
+        # Convert enhanced solar abundances into vectors of values, atomic numbers and atomic weights
+        N_array = []; A_array = []; Z_array = []
+        for key in solar:
+            N_array += [solar[key] + zscale * (Z[symbol == key][0] > 2.0)] # Apply metallicity enhancement to metals
+            A_array += [A[symbol == key][0]]
+            Z_array += [Z[symbol == key][0]]
+        N_array = 10 ** np.array(N_array); A_array = np.array(A_array); Z_array = np.array(Z_array)
+
+        # If Y is provided, alter the helium abundance to match it
+        if Y >= 0.0 and Y <= 1.0:
+            N_array[Z_array == 2] = - np.sum(N_array[Z_array != 2] * A_array[Z_array != 2]) * Y / (A_array[Z_array == 2][0] * Y - A_array[Z_array == 2][0])
+
+        # Generate ATLAS abundances
+        elements = list(range(100))      # 0th element is not used, 1st element refers to H, 2nd to He etc up to 99th element
+        # Hydrogen and helium abundances are simply number fractions
+        elements[1] = N_array[Z_array == 1][0] / np.sum(N_array)
+        elements[2] = N_array[Z_array == 2][0] / np.sum(N_array)
+        # The rest are log10(N(A) / (N(H) + N(He))) *before* the metallicity enhancement
+        for i in range(3, 100):
+            elements[i] = np.log10(N_array[Z_array == i][0] / (N_array[Z_array == 1][0] + N_array[Z_array == 2][0])) - zscale
+            # ATLAS behaves weirdly when abundances are given below -20.0. At -20.0 the element effectively does not exist
+            if elements[i] < -20.0:
+                elements[i] = -20.0
+        return elements
+
+    def abun_solar(self):
+        """
+        Load standard solar abundances.
+
+        returns
+            Standard solar abundances as log10(N(A)/N(H)) + 12.0, keyed by chemical symbols (e.g. "He" for helium)
+        """
+        N = np.loadtxt(python_path + '/data/solar.csv', usecols = [2], unpack = True, delimiter = ',')
+        symbol = np.loadtxt(python_path + '/data/solar.csv', usecols = [5], unpack = True, delimiter = ',', dtype = str)
+        return OrderedDict(zip(symbol, N))
+
+    def atlas_abun(self):
+        """
+        Get ATLAS abundances for this instance of settings. See Settings.abun_std_to_atlas() for details of the output
+        format
+        """
+        return self.abun_std_to_atlas(self.Y, self.zscale, self.abun)
+
+    def check_ODF(self, ODF):
+        # Calculate solar Y
+        Z, A = np.loadtxt(python_path + '/data/solar.csv', usecols = [0, 1], unpack = True, delimiter = ',')
+        symbol = np.loadtxt(python_path + '/data/solar.csv', usecols = [5], unpack = True, delimiter = ',', dtype = str)
+        solar = self.abun_solar()
+        total_mass = 0.0
+        for element in solar:
+            total_mass += 10 ** solar[element] * A[symbol == element][0]
+        Y_solar = 10 ** solar['He'] * A[symbol == 'He'][0] / total_mass
+        if self.Y < 0.0 or self.Y > 1.0:
+            Y = Y_solar
+        else:
+            Y = self.Y
+
+        if ODF['zscale'] != self.zscale:
+            raise ValueError('Incomplatible ODF: ODF calculated for zscale={} as opposed to {}'.format(ODF['zscale'], self.zscale))
+        if not np.isclose(ODF['Y'], Y):
+            raise ValueError('Incomplatible ODF: ODF calculated for Y={} as opposed to {}'.format(ODF['Y'], Y))
+        if ODF['abun'] != self.abun:
+            raise ValueError('Incomplatible ODF: ODF calculated for enhancements {} as opposed to {}'.format(dict(ODF['abun']), dict(self.abun)))
+
+    def __init__(self):
+        self.teff = 5770.0
+        self.logg = 4.44
+        self.zscale = 0.0
+        self.Y = -0.1
+        self.vturb = 2
+        self.abun = {}
+

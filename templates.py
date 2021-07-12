@@ -1,6 +1,7 @@
 ### TEMPLATES OF CONTROL FILES ###
 
 atlas_control_start = """
+cd {output_dir}
 ln -s odf_1.ros fort.1
 ln -s odf_9.bdf fort.9
 ln -s {molecules} fort.2
@@ -8,6 +9,7 @@ ln -s {initial_model} fort.3
 """
 
 atlas_control_end = """
+cd {output_dir}
 mv fort.7 {output_2}
 rm fort.*
 """
@@ -44,6 +46,7 @@ ABUNDANCE SCALE   {abundance_scale} ABUNDANCE CHANGE 1 {element_1} 2 {element_2}
 """
 
 kappa9_control = """
+cd {output_dir}
 mv {d_data}/molecules.dat fort.2
 mv ./p00big{v}.bdf fort.9
 {dfsynthe_suite}/kappa9.exe<<EOF>kapm40k2.out
@@ -157,6 +160,7 @@ mv fort.7 kapk{v}.dat
 """
 
 kapreadts_control = """
+cd {output_dir}
 mv kapk0.dat fort.11
 mv kapk1.dat fort.12
 mv kapk2.dat fort.13
@@ -167,7 +171,8 @@ mv fort.2 kappa.ros
 rm fort.*
 """
 
-xnfdf_control_start = """cp {d_data}/molecules.dat fort.2
+xnfdf_control_start = """cd {output_dir}
+cp {d_data}/molecules.dat fort.2
 cp {d_data}/pfiron.dat fort.4
 cp {d_data}/continua.dat fort.17
 {dfsynthe_suite}/xnfdf.exe<<EOF>xnfdf.out
@@ -238,28 +243,31 @@ BEGIN
 """
 
 dfsynthe_control_start = """
+cd {output_dir}
 mv ./xnfpdf.dat fort.10
 mv ./xnfpdfmax.dat fort.22
-mv {d_data}/repacked_lines/lowlinesdf.bin fort.11
-mv {d_data}/repacked_lines/highlinesdf.bin fort.21
-mv {d_data}/repacked_lines/diatomicsdf.bin fort.31
-mv {d_data}/repacked_lines/tiolinesdf.bin fort.41
-mv {d_data}/repacked_lines/h2olinesdf.bin fort.43
-mv {d_data}/repacked_lines/nltelinesdf.bin fort.51
+mv {d_data}/lowlinesdf.bin fort.11
+mv {d_data}/highlinesdf.bin fort.21
+mv {d_data}/diatomicsdf.bin fort.31
+mv {d_data}/tiolinesdf.bin fort.41
+mv {d_data}/h2olinesdf.bin fort.43
+mv {d_data}/nltelinesdf.bin fort.51
 """
 
 dfsynthe_control_end = """
+cd {output_dir}
 mv fort.10 ./xnfpdf.dat
 mv fort.22 ./xnfpdfmax.dat
-mv fort.11 {d_data}/repacked_lines/lowlinesdf.bin
-mv fort.21 {d_data}/repacked_lines/highlinesdf.bin
-mv fort.31 {d_data}/repacked_lines/diatomicsdf.bin
-mv fort.41 {d_data}/repacked_lines/tiolinesdf.bin
-mv fort.43 {d_data}/repacked_lines/h2olinesdf.bin
-mv fort.51 {d_data}/repacked_lines/nltelinesdf.bin
+mv fort.11 {d_data}/lowlinesdf.bin
+mv fort.21 {d_data}/highlinesdf.bin
+mv fort.31 {d_data}/diatomicsdf.bin
+mv fort.41 {d_data}/tiolinesdf.bin
+mv fort.43 {d_data}/h2olinesdf.bin
+mv fort.51 {d_data}/nltelinesdf.bin
 """
 
 dfsynthe_control = """
+cd {output_dir}
 {dfsynthe_suite}/dfsynthe.exe<<EOF>dfp00t{dft}.out 
 {dfsynthe_control_cards}
 EOF
@@ -295,10 +303,11 @@ mv fort.2 dfp00t{dft}vt8sortp.asc
 mv fort.1 dfp00t{dft}vt8.bin
 """
 
-separatedf_control = """mv dfp00t{dft}vt{v}sortp.asc fort.{serial}
+separatedf_control = """mv {output_dir}/dfp00t{dft}vt{v}sortp.asc {output_dir}/fort.{serial}
 """
 
-separatedf_control_end = """{dfsynthe_suite}/separatedf.exe
+separatedf_control_end = """cd {output_dir}
+{dfsynthe_suite}/separatedf.exe
 mv fort.2 p00big{v}.bdf
 mv fort.3 p00lit{v}.bdf
 rm fort.*
