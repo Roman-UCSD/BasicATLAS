@@ -57,3 +57,35 @@ The test is clean if no output is produced.
 ## Examples
 
 * [Constructing the simplest model with solar parameters](https://github.com/Roman-UCSD/BasicATLAS/blob/master/examples/sun_model.ipynb)
+
+## MacOS Installation
+
+In order to use Intel Fortran, both the [oneAPI Base Toolkit](https://software.intel.com/content/www/us/en/develop/tools/oneapi/base-toolkit/download.html) and the [oneAPI HPC Toolkit](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html) will need to be installed first.
+
+After following the installation steps, the toolkits will need to be initialized using:
+
+```bash
+. /opt/intel/oneapi/setvars.sh
+```
+
+Homebrew will then need to be installed in order to use GNU Fortran:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+The terminal will then prompt you to input your password before beginning the download. 
+
+Once Homebrew has finished downloading, install GNU Fortran using:
+
+```bash
+brew install gcc
+```
+
+Before continuing on to downloading scripts, `wget` will also need to be installed with Homebrew:
+
+```bash
+brew install wget
+```
+
+The download and compilation scripts should then be able to run as shown above.
