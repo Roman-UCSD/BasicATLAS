@@ -9,15 +9,27 @@ import time
 from settings import Settings
 import templates
 
-
+# Path to the home directory of the library
 python_path = os.path.dirname(os.path.realpath(__file__))
 
 def notify(message, silent):
+    """
+    Print message "message" if "silent" is True. This function is used in place of prints throughout the code to allow
+    us to easily silence them all
+    """
     if not silent:
         print(message)
 
 def atlas_converged(run_dir):
-    time.sleep(5)           # Wait a little to make sure the file system had enough time to respond
+    """
+    Calculate convergence parameters for a completed or an ongoing ATLAS run.
+
+    arguments:
+        run_dir      :         Output directory of the ATLAS run
+    """
+    # Wait a little to make sure the file system had enough time to respond (LEGACY: not really sure if this is actually necessary)
+    time.sleep(5)
+
     # Read the main output file
     file = open(run_dir + '/output_main.out', 'r')
     convergence = file.read()
@@ -26,7 +38,7 @@ def atlas_converged(run_dir):
     # in its header. It would also be the last thing in the output file, so it is safe to assume that the lines following
     # the last mention of "TEFF" in the file are the table we need.
     file = open(run_dir + '/output_last_iteration.out', 'w')
-    
+
     # The table is generally space-separated, but negative signs can occasionally overflow the columns and replace the separating
     # spaces, which will confuse np.loadtxt() that I intend to use later. We want to replace all "-" with " -" to ensure that there
     # is a space in front of every number. However, "-" are also present in the scientific notation (e.g. 1.0E-10), which do not need
@@ -35,20 +47,20 @@ def atlas_converged(run_dir):
     s = convergence[convergence.rfind('TEFF'):].replace('E-', 'E=')
     s = s.replace('-', ' -')
     s = s.replace('E=', 'E-')
-    
+
     # If numbers are too large, they get replaced with "*********", which can also confuse np.loadtxt(). Here, we replace all those masked
     # numbers with the maximum supported number (99999.999). We are not introducing any errors here, because those numbers are only used to
     # test for convergence and whether the number is 99999.999 or something larger does not matter, as both indicate non-convergence.
     s = s.replace('*********', '99999.999')
     s = s.replace('E=', 'E-')
-    
+
     # Finally,  we run the two regular expression searches below to fix excessively long numbers that are clashing with each other. We use the
     # fact that ATLAS always outputs 3 decimal places of precision and two digits in the exponent.
     s = re.sub('(\.[0-9]{3})([0-9])', r'\1 \2', s)
     s = re.sub('(E.[0-9]{2})', r'\1 ', s)
     file.write(s)
     file.close()
-    
+
     # Now that the last iteration table is properly formatted and available in a separate file, we can simply read it with np.loadtxt()
     # and get the convergence parameters.
     try:
@@ -58,7 +70,20 @@ def atlas_converged(run_dir):
         de = 99999.999
     return err, de
 
-def atlas(output_dir, settings, restart, niter, ODF, silent = False):
+def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/ap00t5750g45k2.dat', niter = 0, ODF = python_path + '/data/solar_ODF', silent = False):
+    """
+    Run ATLAS-9 to calculate a model stellar atmosphere
+
+    arguments:
+        output_dir     :     Directory to store the output. Must NOT exist
+        settings       :     Object of class Settings() with atmosphere parameters
+        restart        :     Initial model to jump start the calculation. This can point either to a file of type
+                             "output_summary.out" (e.g. from restarts/) or the output directory of an existing ATLAS run
+        niter          :     Number of iterations. Use 0 to iterate until convergence
+        ODF            :     Output directory of a DFSYNTHE run with required Opacity Distribution Functions and Rosseland
+                             mean opacities
+        silent         :     Do not print status messages
+    """
     startTime = datetime.now()
     
     # Organize the working directory
@@ -187,7 +212,6 @@ def atlas(output_dir, settings, restart, niter, ODF, silent = False):
         notify("Failed to converge", silent)
     
     # Save data in a NumPy friendly format
-    os.chdir(python_path)
     file = open(output_dir + '/output_summary.out', 'r')
     data = file.read()
     file.close()
@@ -204,6 +228,18 @@ def atlas(output_dir, settings, restart, niter, ODF, silent = False):
 
 
 def dfsynthe(output_dir, settings, silent = False):
+    """
+    Run DFSYNTHE and KAPPAROS to calculate Opacity Distribution Functions (ODFs) and Rosseland mean opacities for a given
+    set of chemical abundances
+    The calculation is carried out for 5 turbulent velocities (0, 1, 2, 4 and 8 km/s)
+
+    arguments:
+        output_dir     :     Directory to store the output. Must NOT exist
+        settings       :     Object of class Settings() with required chemical abundances
+        restart        :     Initial model to jump start the calculation. This can point either to a file of type
+                             "output_summary.out" (e.g. from restarts/) or the output directory of an existing ATLAS run
+        silent         :     Do not print status messages
+    """
     startTime = datetime.now()
 
     # Standard temperatures
@@ -306,6 +342,12 @@ def dfsynthe(output_dir, settings, silent = False):
     notify('Merged all velocities in a single table. Final output saved in kappa.ros', silent)
 
 def meta(run_dir):
+    """
+    Get meta data for an output directory (ATLAS, SYNTHE of DFSYNTHE)
+
+    arguments:
+        run_dir        :     Output directory of interest
+    """
     if not os.path.isdir(run_dir):
         raise ValueError('Run directory {} not found!'.format(run_dir))
     if os.path.isfile(run_dir + '/xnfdf.com'):
@@ -314,6 +356,12 @@ def meta(run_dir):
         raise ValueError('Run {} type unknown!'.format(run_dir))
 
 def meta_dfsynthe(run_dir):
+    """
+    Get meta data for an output directory of a DFSYNTHE run
+
+    arguments:
+        run_dir        :     Output directory of interest
+    """
     file = open(run_dir + '/xnfdf.com', 'r')
     content = file.read()
     file.close()
@@ -327,6 +375,3 @@ def meta_dfsynthe(run_dir):
     meta = Settings().abun_atlas_to_std(elements, zscale)
     meta['type'] = 'DFSYNTHE'
     return meta
-
-settings = Settings()
-atlas('test_atlas', settings, 'restarts/ap00t5750g45k2.dat', 0, 'test')

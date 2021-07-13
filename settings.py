@@ -6,6 +6,20 @@ python_path = os.path.dirname(os.path.realpath(__file__))
 
 class Settings:
     def abun_atlas_to_std(self, elements, zscale):
+        """
+        Convert ATLAS format abundances to the standard format. See abun_std_to_atlas() for the details of each
+        format
+
+        While carrying out the conversion, the method uses abun_solar() to retrieve standard solar abundances
+
+        arguments:
+            elements          :  List of ATLAS abundances with 100 elements. The 0th element is not used (set to 0.0).
+                                 The rest of the elements have indices corresponding to the atomic number (e.g. 1 for hydrogen)
+            zscale     :         Metallicity in dex ([M/H]). Defaults to 0.0 (solar)
+
+        returns:
+            A dictionary with keys corresponding to the arguments of abun_std_to_atlas()
+        """
         # Get atomic numbers, weights and symbols of all chemical elements
         Z, A = np.loadtxt(python_path + '/data/solar.csv', usecols = [0, 1], unpack = True, delimiter = ',')
         symbol = np.loadtxt(python_path + '/data/solar.csv', usecols = [5], unpack = True, delimiter = ',', dtype = str)
@@ -13,6 +27,7 @@ class Settings:
         # Load solar abundances
         solar = self.abun_solar()
 
+        # Calculate standard abundances
         abun = OrderedDict()
         total_mass = 0.0
         for i in range(3, 100):
@@ -26,6 +41,7 @@ class Settings:
                 abun[symbol[Z == i][0]]
             total_mass += 10 ** (atlas_abun + solar[symbol[Z == i][0]]) * A[Z == i][0]
 
+        # Calculate Helium mass fraction
         helium_mass = elements[2] / (elements[1] / 1e12) * A[Z == 2][0]
         total_mass = total_mass + 1e12 * A[Z == 1][0] + helium_mass
         Y = helium_mass / total_mass
@@ -114,6 +130,10 @@ class Settings:
         return self.abun_std_to_atlas(self.Y, self.zscale, self.abun)
 
     def check_ODF(self, ODF):
+        """
+        Check that a given ODF is compatible with the current settings. "ODF" must be the output of meta(). The function
+        runs silently with no returned value if the ODF is compatible, but throws an exception otherwise
+        """
         # Calculate solar Y
         Z, A = np.loadtxt(python_path + '/data/solar.csv', usecols = [0, 1], unpack = True, delimiter = ',')
         symbol = np.loadtxt(python_path + '/data/solar.csv', usecols = [5], unpack = True, delimiter = ',', dtype = str)
