@@ -15,6 +15,8 @@ rm fort.*
 """
 
 atlas_control = """
+cd {output_dir}
+{atlas_exe}<<"EOF">{output_1}
 READ KAPPA
 READ PUNCH
 MOLECULES ON
@@ -22,7 +24,7 @@ READ MOLECULES
 FREQUENCIES 337 1 337 BIG
 VTURB {vturb}.0E+5
 CONVECTION OVER 1.25 0 36  
-TITLE  [0.0] VTURB={vturb}  L/H=1.25 NOVER NEW ODF 
+TITLE  BasicATLAS
 SCALE 72 -6.875 0.125 {teff} {gravity}
 ABUNDANCE SCALE   {abundance_scale} ABUNDANCE CHANGE 1 {element_1} 2 {element_2}
  ABUNDANCE CHANGE  3 {element_3}  4 {element_4}  5  {element_5}  6  {element_6}  7  {element_7}  8  {element_8}
@@ -43,6 +45,7 @@ ABUNDANCE SCALE   {abundance_scale} ABUNDANCE CHANGE 1 {element_1} 2 {element_2}
  ABUNDANCE CHANGE 93 {element_93} 94 {element_94} 95 {element_95} 96 {element_96} 97 {element_97} 98 {element_98}
  ABUNDANCE CHANGE 99 {element_99}
 {iterations}
+EOF
 """
 
 kappa9_control = """

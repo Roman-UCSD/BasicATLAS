@@ -3,7 +3,6 @@ import os
 import re
 import numpy as np
 from shutil import copyfile
-import pexpect
 import subprocess
 import time
 
@@ -49,9 +48,6 @@ def atlas_converged(run_dir):
     arguments:
         run_dir      :         Output directory of the ATLAS run
     """
-    # Wait a little to make sure the file system had enough time to respond (LEGACY: not really sure if this is actually necessary)
-    time.sleep(5)
-
     # Read the main output file
     file = open(run_dir + '/output_main.out', 'r')
     convergence = file.read()
@@ -80,7 +76,7 @@ def atlas_converged(run_dir):
     # fact that ATLAS always outputs 3 decimal places of precision and two digits in the exponent.
     s = re.sub('(\.[0-9]{3})([0-9])', r'\1 \2', s)
     s = re.sub('(E.[0-9]{2})', r'\1 ', s)
-    file.write(s)
+    file.write('\n'.join(s.strip().split('\n')[:-1]))
     file.close()
 
     # Now that the last iteration table is properly formatted and available in a separate file, we can simply read it with np.loadtxt()
@@ -152,9 +148,12 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
         cards['element_' + str(z)] = str(round(float(abundance), 2))
     cards['element_1'] = str(float(settings.atlas_abun()[1]))
     cards['element_2'] = str(float(settings.atlas_abun()[2]))
-    cards.update({'iterations': templates.atlas_iterations.format(iterations = '15') * int(np.floor(int(niter) / 15))})
-    if int(niter) % 15 != 0:
-        cards['iterations'] += templates.atlas_iterations.format(iterations = str(int(niter) % 15))
+    if niter != 0:
+        cards.update({'iterations': templates.atlas_iterations.format(iterations = '15') * int(np.floor(int(niter) / 15))})
+        if int(niter) % 15 != 0:
+            cards['iterations'] += templates.atlas_iterations.format(iterations = str(int(niter) % 15))
+    else:
+        cards.update({'iterations': templates.atlas_iterations.format(iterations = '15')})
     file = open(output_dir + '/atlas_control_start.com', 'w')
     file.write(templates.atlas_control_start.format(**cards))
     file.close()
@@ -165,37 +164,15 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
     file.write(templates.atlas_control_end.format(**cards))
     file.close()
     notify("Launcher created", silent)
-    
+
     # Run ATLAS
-    last_line = '[ ]+72[- ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+([^\n ]+[ ]+.+|[0-9-]+\.[0-9-]+\.[0-9-]+)' # This regex should match the final line in the output of a successful ATLAS-9 run (72nd layer)
     cmd('bash {}/atlas_control_start.com'.format(output_dir))
-    
-    # We will allow 20 minutes of processing for every 15 iterations before automatic timeout.
-    # This should be more than enough.
-    if (int(niter) == 0):
-        timeout = 1200
-    else:
-        timeout = int(1200 * int(niter) / 15.0)
-    process = pexpect.spawnu(cards['atlas_exe'], timeout = timeout, cwd = output_dir)  # Launch the ATLAS executable
-    process.logfile = open(cards['output_1'], "w")                   # Direct the output into a file
-    # For a manual number of iterations, atlas_control.com will contain everything we want to feed into ATLAS (except the termination command, "END").
-    # For an automatic number of iterations, we still want to run everything that is in this file, but we will have to iterate manually in the end.
-    with open('{}/atlas_control.com'.format(output_dir)) as f:
-        content = f.readlines()
-    # Feed every line from the file into the running instance of ATLAS
-    for line in content:
-        line = line.rstrip("\n\r")
-        if line == '':
-            continue
-        process.sendline(line)
+
+    # For a manual number of iterations, it is sufficient to source atlas_control.com
+    # For an automatic number of iterations, we will source atlas_control.com multiple times replacing the initial model with the output each time
+    cmd('bash {}/atlas_control.com'.format(output_dir))
     if (int(niter) == 0):
         notify("Starting automatic iterations...", silent)
-        # Do 15 iterations
-        process.send(templates.atlas_iterations.format(iterations = 15))
-        # Wait for ATLAS to begin the last of the 15 iterations
-        process.expect('ITERATION 15')
-        # Wait for ATLAS to end the 15th iteration
-        process.expect(last_line)
         # Check for covergence
         err, de = atlas_converged(output_dir)
         notify("15 iterations completed: max[abs(err)] = " + str(np.max(np.abs(err))) + " | max[abs(de)] = " + str(np.max(np.abs(de))), silent)
@@ -207,9 +184,10 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
             if i == max_i:
                 notify("Exceeded the maximum number of iterations ;(", silent)
                 break
-            process.send(templates.atlas_iterations.format(iterations = 15))
-            process.expect('ITERATION 15')
-            process.expect(last_line)
+            # Replace initial model with output
+            os.rename(output_dir + '/fort.7', output_dir + '/fort.3')
+
+            cmd('bash {}/atlas_control.com'.format(output_dir))
             err_old = np.max(np.abs(err))
             de_old = np.max(np.abs(de))
             err, de = atlas_converged(output_dir)
@@ -217,10 +195,6 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
             if (err_old - np.max(np.abs(err)) + de_old - np.max(np.abs(de))) < 0.1 and (i > 10):
                 notify("The model is unlikely to converge any better ;(", silent)
                 break
-        process.logfile = None   # This is necessary, so that our "END" does not show up in the output.
-    # Terminate ATLAS
-    process.sendline('END')
-    process.expect(pexpect.EOF)
     notify("ATLAS-9 halted", silent)
     
     cmd('bash {}/atlas_control_end.com'.format(output_dir))
@@ -234,7 +208,7 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
         notify("Failed to converge", silent)
 
     # Save data in a NumPy friendly format
-    file = open(output_dir + '/output_summary.out', 'r')
+    file = open(cards['output_2'], 'r')
     data = file.read()
     file.close()
     file = open(output_dir + '/model.dat', 'w')
@@ -325,8 +299,6 @@ def dfsynthe(output_dir, settings, silent = False):
     arguments:
         output_dir     :     Directory to store the output. Must NOT exist
         settings       :     Object of class Settings() with required chemical abundances
-        restart        :     Initial model to jump start the calculation. This can point either to a file of type
-                             "output_summary.out" (e.g. from restarts/) or the output directory of an existing ATLAS run
         silent         :     Do not print status messages
     """
     startTime = datetime.now()
