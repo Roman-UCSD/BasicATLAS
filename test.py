@@ -3,8 +3,10 @@ import hashlib
 
 python_path = os.path.dirname(os.path.realpath(__file__))
 
+
 # Check these files for presence
-no_hash = ['bin/atlas9mem.exe', 'bin/dfsortp.exe', 'bin/dfsynthe.exe', 'bin/kappa9.exe', 'bin/kapreadts.exe', 'bin/separatedf.exe', 'bin/xnfdf.exe']
+no_hash = ['bin/atlas9mem.exe', 'bin/dfsortp.exe', 'bin/dfsynthe.exe', 'bin/kappa9.exe', 'bin/kapreadts.exe', 'bin/separatedf.exe', 'bin/xnfdf.exe', 'bin/rgfalllinesnew.exe', 'bin/rmolecasc.exe', 'bin/rschwenk.exe',
+           'bin/spectrv.exe', 'bin/synthe.exe', 'bin/xnfpelsyn.exe', 'bin/converfsynnmtoa.exe', 'bin/rh2ofast.exe', 'bin/rpredict.exe', 'bin/synbeg.exe']
 
 # Check these files for MD5 hashes
 hash = {
@@ -17,8 +19,36 @@ hash = {
     'data/dfsynthe_files/lowlinesdf.bin': '349cfd5d90e52c28ad75a305301ecd59',
     'data/dfsynthe_files/nltelinesdf.bin': 'fd7fb0ef7c20e258e5f4ee6af7654298',
     'data/dfsynthe_files/tiolinesdf.bin': '0170def19d7ab7794263b2922bbf402a',
- 
+
     'data/atlas_files/molecules.dat': 'a13345627ab05e39c8c366b23bfb4f53',
+
+    'data/synthe_files/c2ax.asc': '5545687ba484ec738025f1274e25f44c',
+    'data/synthe_files/c2ba.asc': '2332d41064cc9d8463db09169da4025a',
+    'data/synthe_files/c2dabrookek.asc': '282ddbb87a59818cc7dcf488884c59a7',
+    'data/synthe_files/c2ea.asc': 'a77c438e5bfce97678b74bf17108aeef',
+    'data/synthe_files/chmasseron.asc': '98e781103a62141ff3806ee514999f4a',
+    'data/synthe_files/cnaxbrookek.asc': 'd8c9671b0f628d7491644c2aaecb9812',
+    'data/synthe_files/cnbxbrookek.asc': '3e21095f49b9f29f1d30a725d25abc3d',
+    'data/synthe_files/cnxx12brooke.asc': 'd7ac0759f7a129751ebab10ff551f20e',
+    'data/synthe_files/coax.asc': '92c558cc9b23ee96dcc0e0179730faeb',
+    'data/synthe_files/continua.dat': '9e317b10bd777bf997e027543aed00ac',
+    'data/synthe_files/coxx.asc': '778d9fe8001ba91211ac1209702b236b',
+    'data/synthe_files/eschwenke.bin': 'f918590e36fc49425581e5c9147911b7',
+    'data/synthe_files/gfall08oct17.dat': '32e655430d5a7ce36f556bd545167971',
+    'data/synthe_files/h2.asc': '527b750951c035b5978dba1b5de38215',
+    'data/synthe_files/h2ofastfix.bin': 'd62e69d234182e6281f249c0ae555ce4',
+    'data/synthe_files/h2xx.asc': 'ae63f1d809523ac0c92bde48280dd2ba',
+    'data/synthe_files/hdxx.asc': '8a741ea1a118d7154165fded06a1d9c0',
+    'data/synthe_files/he1tables.dat': '3e1aa7dd7c0f420d12f3d5d88c342342',
+    'data/synthe_files/mgh.asc': '499c933ddfbe0be4b3d0c85f18b6a700',
+    'data/synthe_files/molecules.dat': 'b9dbc40dcd9c56c9f534842888488760',
+    'data/synthe_files/nh.asc': 'f6888c332a313ccf2c720e2371c26836',
+    'data/synthe_files/ohupdate.asc': '846cb1da995c3a39d86340d57475edcc',
+    'data/synthe_files/sihax.asc': 'efc2f067a4b3102fbbec6a9d526f350b',
+    'data/synthe_files/sioax.asc': '7e8de7d2eaa68c78a164d89556590119',
+    'data/synthe_files/sioex.asc': '8a53e55a001cba30896a37bc07c0869d',
+    'data/synthe_files/sioxx.asc': '4671eb6faecd1b320847458c54b9647c',
+    'data/synthe_files/tioschwenke.bin': 'bd1bebfc340d9955b2747e043c4e6206',
 }
 
 

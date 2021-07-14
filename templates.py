@@ -327,11 +327,9 @@ READ MOLECULES
 MOLECULES ON
 """
 
-synthe_control = """
-# SYNTHE test run for a near-solar model
-
-ln -s {s_data}/molecules.dat fort.2
-ln -s {s_data}/continua.dat fort.17
+synthe_control = """cd {output_dir}
+ln -s {s_files}/molecules.dat fort.2
+ln -s {s_files}/continua.dat fort.17
 
 # synthe_solar contains the ATLAS-9 output near-solar model with a few additional commands prepended
 # First, run xnfpelsyn.exe which takes the model and atomic and molecular densities (whatever that means)
@@ -342,125 +340,105 @@ rm fort.*
 # synberg.exe initializes the computation. It feeds on the computation parameters such as the wavelength range
 # (WLBEG to WLEND), resolution and more...
 {synthe_suite}/synbeg.exe<<"EOF">synbeg.out
-AIR       {min_wl}{max_wl}600000.     0.00    0     30    .0001     1    0
+{airorvac:<3s}       {wlbeg:<10.4f}{wlend:<10.4f}{resolu:<10.4f}{turbv:<10.4f}{ifnlte:<3d}{linout:<7d}{cutoff:<10.5f}{ifpred:<5d}{nread:<5d}
 AIRorVAC  WLBEG     WLEND     RESOLU    TURBV  IFNLTE LINOUT CUTOFF        NREAD
 EOF
 
 # Below we import all the spectral lines that we want. Ultimately, it is just a tonne of files with line parameters
 # each subsequently fed into rgfalllinesnew.exe for atoms and rmolecasc.exe for molecules
-ln -s {s_data}/gf0800.100 fort.11
-{synthe_suite}/rgfalllinesnew.exe>gf0800.out
+ln -s {s_files}/gfall08oct17.dat fort.11
+{synthe_suite}/rgfalllinesnew.exe>rgfalllinesnew.out
 rm fort.11
-ln -s {s_data}/gf1200.100 fort.11
-{synthe_suite}/rgfalllinesnew.exe>gf1200.out
-rm fort.11
-ln -s {s_data}/gf0200.100 fort.11
-{synthe_suite}/rgfalllinesnew.exe>gf0200.out
-rm fort.11
-ln -s {s_data}/gf0300.100 fort.11
-{synthe_suite}/rgfalllinesnew.exe>gf0300.out
-rm fort.11
-ln -s {s_data}/gf0400.100 fort.11
-{synthe_suite}/rgfalllinesnew.exe>gf0400.out
-rm fort.11
-ln -s {s_data}/gf0500.100 fort.11
-{synthe_suite}/rgfalllinesnew.exe>gf0500.out
-rm fort.11
-ln -s {s_data}/gf0600.100 fort.11
-{synthe_suite}/rgfalllinesnew.exe>gf0600.out
-rm fort.11
-ln -s {s_data}/gf3000.100 fort.11
-{synthe_suite}/rgfalllinesnew.exe>gf3000.out
-rm fort.11
-ln -s  {s_molecules}/chmasseron.asc fort.11
+
+ln -s  {s_files}/chmasseron.asc fort.11
 {synthe_suite}/rmolecasc.exe>chmasseron.out
 rm fort.11
-ln -s {s_molecules}/mgh.asc fort.11
+ln -s {s_files}/mgh.asc fort.11
 {synthe_suite}/rmolecasc.exe>mgh.out
 rm fort.11
-ln -s {s_molecules}/nh.asc fort.11
+ln -s {s_files}/nh.asc fort.11
 {synthe_suite}/rmolecasc.exe>nh.out
 rm fort.11
-ln -s  {s_molecules}/ohupdate.asc fort.11
+ln -s  {s_files}/ohupdate.asc fort.11
 {synthe_suite}/rmolecasc.exe>oh.out
 rm fort.11
-ln -s  {s_molecules}/sihax.asc fort.11
+ln -s  {s_files}/sihax.asc fort.11
 {synthe_suite}/rmolecasc.exe>sihax.out
 rm fort.11
-ln -s {s_molecules}/h2.asc fort.11
+ln -s {s_files}/h2.asc fort.11
 {synthe_suite}/rmolecasc.exe>h2.out
 rm fort.11
-ln -s {s_molecules}/h2xx.asc fort.11
+ln -s {s_files}/h2xx.asc fort.11
 {synthe_suite}/rmolecasc.exe>h2xx.out
 rm fort.11
-ln -s {s_molecules}/hdxx.asc fort.11
+ln -s {s_files}/hdxx.asc fort.11
 {synthe_suite}/rmolecasc.exe>hdxx.out
 rm fort.11
-ln -s {s_molecules}/c2ax.asc fort.11
+ln -s {s_files}/c2ax.asc fort.11
 {synthe_suite}/rmolecasc.exe>c2ax.out
 rm fort.11
-ln -s {s_molecules}/c2ba.asc fort.11
+ln -s {s_files}/c2ba.asc fort.11
 {synthe_suite}/rmolecasc.exe>c2ba.out
 rm fort.11
-ln -s {s_molecules}/c2dabrookek.asc fort.11
+ln -s {s_files}/c2dabrookek.asc fort.11
 {synthe_suite}/rmolecasc.exe>c2da.out
 rm fort.11
-ln -s  {s_molecules}/c2ea.asc fort.11
+ln -s  {s_files}/c2ea.asc fort.11
 {synthe_suite}/rmolecasc.exe>c2ea.out
 rm fort.11
-ln -s {s_molecules}/cnaxbrookek.asc fort.11
+ln -s {s_files}/cnaxbrookek.asc fort.11
 {synthe_suite}/rmolecasc.exe>cnax.out
 rm fort.11
-ln -s {s_molecules}/cnbxbrookek.asc fort.11
+ln -s {s_files}/cnbxbrookek.asc fort.11
 {synthe_suite}/rmolecasc.exe>cnbx.out
 rm fort.11
-ln -s {s_molecules}/cnxx12brooke.asc fort.11
+ln -s {s_files}/cnxx12brooke.asc fort.11
 {synthe_suite}/rmolecasc.exe>cnxx12.out
 rm fort.11
-ln -s {s_molecules}/coax.asc fort.11
+ln -s {s_files}/coax.asc fort.11
 {synthe_suite}/rmolecasc.exe>coax.out
 rm fort.11
-ln -s {s_molecules}/coxx.asc fort.11
+ln -s {s_files}/coxx.asc fort.11
 {synthe_suite}/rmolecasc.exe>coxx.out
 rm fort.11
-ln -s {s_molecules}/sioax.asc fort.11
+ln -s {s_files}/sioax.asc fort.11
 {synthe_suite}/rmolecasc.exe>sioax.out
 rm fort.11
-ln -s {s_molecules}/sioex.asc fort.11
+ln -s {s_files}/sioex.asc fort.11
 {synthe_suite}/rmolecasc.exe>sioex.out
 rm fort.11
-ln -s {s_molecules}/sioxx.asc fort.11
+ln -s {s_files}/sioxx.asc fort.11
 {synthe_suite}/rmolecasc.exe>sioxx.out
 rm fort.11
 
 # weird stuff: to be figured out...
-ln -s {s_data}/fclowlines.bin fort.11
+ln -s {d_files}/lowlines.bin fort.11
 {synthe_suite}/rpredict.exe>predictedlow.out
 rm fort.11
-ln -s {s_data}/fchighlines.bin fort.11
+ln -s {d_files}/highlines.bin fort.11
 {synthe_suite}/rpredict.exe>predicthigh.out
 rm fort.11
 
 
 # rschwenk.exe adds Titanium Oxide to the model (TiO) and requires two input databases
-ln -s {s_molecules}/tioschwenke.bin fort.11
-ln -s {s_molecules}/eschwenke.bin fort.48
+ln -s {s_files}/tioschwenke.bin fort.11
+ln -s {s_files}/eschwenke.bin fort.48
 {synthe_suite}/rschwenk.exe>rschwenk.out
 rm fort.11
 rm fort.48
 
 # rh2ofast.exe does the same for water
-ln -s {s_molecules}/h2ofastfix.bin fort.11
+ln -s {s_files}/h2ofastfix.bin fort.11
 {synthe_suite}/rh2ofast.exe>h2ofastfix.out
 rm fort.11
 
 # synthe.exe requires the previously calculated atomic and molecular densities (by xnfpelsyn.exe) and computes line opacities
 ln xnft4950g46k1at12.dat fort.10
-ln -s {s_data}/he1tables.dat fort.18
+ln -s {s_files}/he1tables.dat fort.18
 {synthe_suite}/synthe.exe>synthe.out
 
 # spectrv.exe computes the synthetic spectrum. I don't know what these parameters mean just yet.
-ln -s {s_data}/molecules.dat fort.2
+ln -s {s_files}/molecules.dat fort.2
 cat <<"EOF" >fort.25
 0.0       0.        1.        0.        0.        0.        0.        0.
 0.
@@ -468,31 +446,16 @@ RHOXJ     R1        R101      PH1       PC1       PSI1      PRDDOP    PRDPOW
 EOF
 {synthe_suite}/spectrv.exe<"{synthe_solar}">spectrv.out
 
-# Below we are supposed to be rotating and broadening the spectrum. This does not work and gives NaNs all over the resulting spectrum
-# leaving it commented out for now.
-# 
-# mv fort.7 i7000-7210.dat
-# ln -s i7000-7210.dat fort.1
-# {synthe_suite}/rotate.exe<<"EOF">rotate.out
-#     1
-# 0.
-# EOF
-# mv ROT1 f7000-7210vr2.dat
-# ln -s f7000-7210vr2.dat fort.21
-# {synthe_suite}/broaden.exe<<"EOF">broaden.out
-# GAUSSIAN  48000.    RESOLUTION
-# EOF
-# mv fort.22 f7000-7210vr2br48000ap04t4970g46k1at12.bin
-mv fort.7 f7000-7210vr2br48000ap04t4970g46k1at12.bin
+mv fort.7 spectrum.bin
 rm fort.*
 
 # Finally, converfsynnmtoa.exe converts the output spectrum in binary into a text file
 
-ln -s f7000-7210vr2br48000ap04t4970g46k1at12.bin fort.1
+ln -s spectrum.bin fort.1
 {synthe_suite}/converfsynnmtoa.exe > converfsynnmtoa.out
-mv fort.2 f7000-7210vr2br48000ap04t4970g46k1at12.asc
+mv fort.2 spectrum.asc
 
 rm fort.*
 rm xnft4950g46k1at12.dat
-rm f7000-7210vr2br48000ap04t4970g46k1at12.bin    # Remove binaries
+rm spectrum.bin    # Remove binaries
 """

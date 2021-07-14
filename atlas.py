@@ -4,6 +4,7 @@ import re
 import numpy as np
 from shutil import copyfile
 import pexpect
+import subprocess
 import time
 
 from settings import Settings
@@ -19,6 +20,27 @@ def notify(message, silent):
     """
     if not silent:
         print(message)
+
+def cmd(command):
+    """
+    Run a shell command and, if any output is produced, print it including both STDOUT and STDERR
+    """
+    session = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
+    stdout, stderr = session.communicate()
+    stdout = stdout.decode().strip()
+    stderr = stderr.decode().strip()
+    if stdout != '':
+        print(stdout)
+    if stderr != '':
+        print(stderr)
+
+def bin_spec(wl, flux, num_bins = 1000):
+    """
+    Bin a given spectrum ("wl" and "flux") into a given number of bins
+    """
+    hist_sum = np.histogram(wl, bins = num_bins, weights = flux)
+    hist_count = np.histogram(wl, bins = num_bins)
+    return np.array(hist_sum[1][1:] + hist_sum[1][:-1])[hist_count[0] > 0] / 2.0, hist_sum[0][hist_count[0] > 0] / hist_count[0][hist_count[0] > 0]
 
 def atlas_converged(run_dir):
     """
@@ -146,7 +168,7 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
     
     # Run ATLAS
     last_line = '[ ]+72[- ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+[^\n ]+[ ]+([^\n ]+[ ]+.+|[0-9-]+\.[0-9-]+\.[0-9-]+)' # This regex should match the final line in the output of a successful ATLAS-9 run (72nd layer)
-    os.system('bash {}/atlas_control_start.com'.format(output_dir))
+    cmd('bash {}/atlas_control_start.com'.format(output_dir))
     
     # We will allow 20 minutes of processing for every 15 iterations before automatic timeout.
     # This should be more than enough.
@@ -201,7 +223,7 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
     process.expect(pexpect.EOF)
     notify("ATLAS-9 halted", silent)
     
-    os.system('bash {}/atlas_control_end.com'.format(output_dir))
+    cmd('bash {}/atlas_control_end.com'.format(output_dir))
     if not (os.path.isfile(cards['output_1']) and os.path.isfile(cards['output_2'])):
         raise ValueError("ATLAS-9 did not output expected files")
 
@@ -210,7 +232,7 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
     notify("\nFinal convergence: max[abs(err)] = " + str(np.max(np.abs(err))) + " | max[abs(de)] = " + str(np.max(np.abs(de))), silent)
     if (np.max(np.abs(err)) > 1) or (np.max(np.abs(de)) > 10):
         notify("Failed to converge", silent)
-    
+
     # Save data in a NumPy friendly format
     file = open(output_dir + '/output_summary.out', 'r')
     data = file.read()
@@ -222,9 +244,76 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
     data[2] = 0.000001 * data[2]    # Bars conversion
     np.savetxt(output_dir + '/model.dat', data.T, delimiter = ',', header = 'Mass Column Density [g cm^-2],Temperature [K],Pressure [Bar]')
     notify("Saved the model in model.dat", silent)
-    
+
     notify("Finished running ATLAS-9 in " + str(datetime.now() - startTime) + " s", silent)
 
+def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, silent = False):
+    """
+    Run SYNTHE to calculate the emergent spectrum corresponding to an existing ATLAS model
+
+    arguments:
+        output_dir     :     Directory to store the output. Must contain the output of a previously executed ATLAS run
+        min_wl         :     Minimum wavelength of the calculation (nm)
+        max_wl         :     Maximum wavelength of the calculation (nm)
+        res            :     Sampling resolution (lambda / delta_lambda)
+        vturb          :     Turbulent velocity [km/s]
+        silent         :     Do not print status messages
+    """
+    startTime = datetime.now()
+
+    # Check that the ATLAS-9 run exists
+    output_dir = os.path.realpath(output_dir)
+    if not (os.path.isfile(output_dir + '/output_main.out') and os.path.isfile(output_dir + '/output_summary.out')):
+        raise ValueError('ATLAS run output not found in {}'.format(output_dir))
+
+    # Prepare a SYNTHE friendly file
+    if not (os.path.isfile(output_dir + '/output_synthe.out')):
+        file = open(output_dir + '/output_summary.out', 'r')
+        model = file.read()
+        file.close()
+        file = open(output_dir + '/output_synthe.out', 'w')
+        file.write(templates.synthe_prependix + model)
+        file.close()
+        notify("Adapted the ATLAS-9 model to SYNTHE in output_synthe.out", silent)
+    else:
+        notify("The ATLAS-9 model has already been adapted to SYNTHE", silent)
+
+    # Generate a launcher command file
+    cards = {
+      's_files': python_path + '/data/synthe_files/',
+      'd_files': python_path + '/data/dfsynthe_files/',
+      'synthe_suite': python_path + '/bin/',
+      'airorvac': 'AIR',
+      'wlbeg': float(min_wl),
+      'wlend': float(max_wl),
+      'resolu': float(res),
+      'turbv': float(vturb),
+      'ifnlte': 0,
+      'linout': 30,
+      'cutoff': 0.0001,
+      'ifpred': 1,
+      'nread': 0,
+      'synthe_solar': output_dir + '/output_synthe.out',
+      'output_dir': output_dir,
+    }
+    file = open(output_dir + '/synthe_launch.com', 'w')
+    file.write(templates.synthe_control.format(**cards))
+    file.close()
+    notify("Launcher created", silent)
+
+    # Run SYNTHE
+    cmd('bash {}/synthe_launch.com'.format(output_dir))
+    if not (os.path.isfile(output_dir + '/spectrum.asc')):
+        raise ValueError("SYNTHE did not output expected files")
+    notify("SYNTHE halted", silent)
+
+    # Save data in a NumPy friendly format
+    data = np.loadtxt(output_dir + '/spectrum.asc', unpack = True, skiprows = 2)
+    notify("Total data points: " + str(len(data[0])), silent)
+    np.savetxt(output_dir + '/spectrum.dat', data.T, delimiter = ',', header = 'Wavelength [A],Line intensity [erg s^-1 cm^-2 A^-1 strad^-1],Continuum intensity [erg s^-1 cm^-2 A^-1 strad^-1],Intensity ratio')
+    notify("Saved the spectrum in spectrum.dat", silent)
+
+    notify("Finished running SYNTHE in " + str(datetime.now() - startTime) + " s", silent)
 
 
 def dfsynthe(output_dir, settings, silent = False):
@@ -281,7 +370,7 @@ def dfsynthe(output_dir, settings, silent = False):
     notify('Launcher created for ' + str(len(dfts)) + ' temperatures from ' + str(min(map(float, dfts))) + ' K to ' + str(max(map(float, dfts))) + ' K', silent)
     
     # Run XNFDF
-    os.system('bash {}/xnfdf.com'.format(output_dir))
+    cmd('bash {}/xnfdf.com'.format(output_dir))
     print(output_dir + '/xnfpdf.dat')
     if (not (os.path.isfile(output_dir + '/xnfpdf.dat'))) or (not (os.path.isfile(output_dir + '/xnfpdfmax.dat'))):
          raise ValueError('XNFDF did not output expected files')
@@ -295,16 +384,16 @@ def dfsynthe(output_dir, settings, silent = False):
     file.write(templates.dfsynthe_control_end.format(**cards))
     file.close()
     notify('Will run DFSYNTHE to tabulate the ODFs (Opacity Distribution Functions)', silent)
-    os.system('bash {}/dfp_start.com'.format(output_dir))
+    cmd('bash {}/dfp_start.com'.format(output_dir))
     for i, dft in enumerate(dfts):
         cards['dft'] = str(int(float(dft)))
         cards['dfsynthe_control_cards'] = '0' * i + '1' + '0' * (len(dfts) - 1 - i)
         file = open(output_dir + '/dfp.com', 'w')
         file.write(templates.dfsynthe_control.format(**cards))
         file.close()
-        os.system('bash {}/dfp.com'.format(output_dir))
+        cmd('bash {}/dfp.com'.format(output_dir))
         notify(str(float(dft)) + ' K done! (' + str(i+1) + '/' + str(len(dfts)) + ')', silent)
-    os.system('bash {}/dfp_end.com'.format(output_dir))
+    cmd('bash {}/dfp_end.com'.format(output_dir))
     
     # Run SEPARATEDF
     notify('Will run SEPARATEDF to merge the output in a single file for every standard turbulent velocity (0, 1, 2, 4 and 8 km/s)', silent)
@@ -317,7 +406,7 @@ def dfsynthe(output_dir, settings, silent = False):
             file.write(templates.separatedf_control.format(**cards))
         file.write(templates.separatedf_control_end.format(**cards))
         file.close()
-        os.system('bash {}/separatedf.com'.format(output_dir))
+        cmd('bash {}/separatedf.com'.format(output_dir))
         if (not (os.path.isfile(output_dir + '/p00big' + v + '.bdf'))) or (not (os.path.isfile(output_dir + '/p00lit' + v + '.bdf'))):
             raise ValueError('SEPARATEDF did not output expected files')
         notify(v + " km/s done! (" + str(j+1) + "/" + str(len(vs)) + ")", silent)
@@ -331,14 +420,14 @@ def dfsynthe(output_dir, settings, silent = False):
             file = open(output_dir + '/kappa9v' + v + '.com', 'w')
             file.write(templates.kappa9_control.format(**cards))
             file.close()
-            os.system('bash {}/kappa9v'.format(output_dir) + v + '.com')
+            cmd('bash {}/kappa9v'.format(output_dir) + v + '.com')
             notify(v + ' km/s done! (' + str(i+1) + '/' + str(len(vs)) + ')', silent)
     
     # Run KAPREADTS
     file = open(output_dir + '/kapreadts.com', 'w')
     file.write(templates.kapreadts_control.format(**cards))
     file.close()
-    os.system('bash {}/kapreadts.com'.format(output_dir))
+    cmd('bash {}/kapreadts.com'.format(output_dir))
     notify('Merged all velocities in a single table. Final output saved in kappa.ros', silent)
 
 def meta(run_dir):
