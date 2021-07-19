@@ -331,13 +331,15 @@ MOLECULES ON
 """
 
 synthe_control = """cd {output_dir}
+mkdir -p synthe_{synthe_num}
+cd synthe_{synthe_num}/
 ln -s {s_files}/molecules.dat fort.2
 ln -s {s_files}/continua.dat fort.17
 
 # synthe_solar contains the ATLAS-9 output near-solar model with a few additional commands prepended
 # First, run xnfpelsyn.exe which takes the model and atomic and molecular densities (whatever that means)
 {synthe_suite}/xnfpelsyn.exe< {synthe_solar}>xnfpelsyn.out
-mv fort.10 xnft4950g46k1at12.dat
+mv fort.10 xnfpelsyn.dat
 rm fort.*
 
 # synberg.exe initializes the computation. It feeds on the computation parameters such as the wavelength range
@@ -436,7 +438,7 @@ ln -s {s_files}/h2ofastfix.bin fort.11
 rm fort.11
 
 # synthe.exe requires the previously calculated atomic and molecular densities (by xnfpelsyn.exe) and computes line opacities
-ln xnft4950g46k1at12.dat fort.10
+ln xnfpelsyn.dat fort.10
 ln -s {s_files}/he1tables.dat fort.18
 {synthe_suite}/synthe.exe>synthe.out
 
@@ -459,6 +461,6 @@ ln -s spectrum.bin fort.1
 mv fort.2 spectrum.asc
 
 rm fort.*
-rm xnft4950g46k1at12.dat
+rm xnfpelsyn.dat
 rm spectrum.bin    # Remove binaries
 """

@@ -41,7 +41,31 @@ mv fort.19 data/dfsynthe_files/nltelinesdf.bin
 rm fort.*
 rm repacknlte.out
 
-# Compile ATLAS-9
+# Patch ATLAS-9 to give additional output
+patch src/atlas9mem.for <<EOF
+61c661
+<      1HEIGHT(J),TAUROS(J),FLXCNVratio(J),ACCRAD(J),FLXERR(J),FLXDRV(J),
+---
+>      1HEIGHT(J),TAUROS(J),FLXCNV(J),PRADK(J),FLXERR(J),FLXDRV(J),
+664c664
+<      1   ROSSELAND    HEIGHT   ROSSELAND   FRACTION  RADIATIVE        PE
+---
+>      1   ROSSELAND    HEIGHT   ROSSELAND             RADIATION        PE
+666c666
+<      3ENSITY      MEAN       (KM)      DEPTH    CONV FLUX  ACCELERATION +
+---
+>      3ENSITY      MEAN       (KM)      DEPTH    CONV FLUX  PRESSURE     +
+683c683
+<      1VTURB(J),FLXCNV(J),VCONV(J),VELSND(J),J=1,NRHOX)
+---
+>      1VTURB(J),FLXRAD(J),VCONV(J),VELSND(J),J=1,NRHOX)
+685c685
+<      1 FLXCNV,VCONV,VELSND'/(1PE15.8,0PF9.1,1P8E10.3))
+---
+>      1 FLXRAD,VCONV,VELSND'/(1PE15.8,0PF9.1,1P8E10.3))
+EOF
+
+# Compile patched ATLAS-9
 gfortran -o bin/atlas9mem.exe src/atlas9mem.for -finit-local-zero -fno-automatic -w -std=legacy
 
 # Compile SYNTHE

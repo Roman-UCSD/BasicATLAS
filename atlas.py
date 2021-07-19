@@ -5,6 +5,7 @@ import numpy as np
 from shutil import copyfile
 import subprocess
 import time
+from scipy.optimize import brentq
 
 from settings import Settings
 import templates
@@ -221,7 +222,31 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
 
     notify("Finished running ATLAS-9 in " + str(datetime.now() - startTime) + " s", silent)
 
-def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, silent = False):
+def synbeg(min_wl, max_wl, res):
+    """
+    Calculate the total number of wavelength points in a given region at given resolution. The function mimics the
+    calculation carried out by synbeg.for and should produce the same output
+
+    arguments:
+        min_wl         :     Minimum wavelength of the calculation (nm)
+        max_wl         :     Maximum wavelength of the calculation (nm)
+        res            :     Sampling resolution (lambda / delta_lambda)
+    """
+    ratio = 1.0 + 1.0 / res
+    ratiolg = np.log(ratio)
+    ixwlbeg = int(np.log(min_wl) / ratiolg)
+    wbegin = np.e ** (ixwlbeg * ratiolg)
+    if (wbegin < min_wl):
+        ixwlbeg += 1
+        wbegin = np.e ** (ixwlbeg * ratiolg)
+    ixwlend = int(np.log(max_wl) / ratiolg)
+    wllast = np.e ** (ixwlend * ratiolg)
+    if (wllast > max_wl):
+        ixwlend -= 1
+        wllast = np.e ** (ixwlend * ratiolg)
+    return int(ixwlend - ixwlbeg + 1)
+
+def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2010001, silent = False):
     """
     Run SYNTHE to calculate the emergent spectrum corresponding to an existing ATLAS model
 
@@ -231,6 +256,11 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, silent = Fal
         max_wl         :     Maximum wavelength of the calculation (nm)
         res            :     Sampling resolution (lambda / delta_lambda)
         vturb          :     Turbulent velocity [km/s]
+        buffsize       :     Maximum allowed number of wavelength points per calculation. If the required number of points
+                             exceeds this value, the calculation will be split into multiple batches. This argument is
+                             introduced as SYNTHE allocates a buffer of finite size and cannot handle more wavelength
+                             points than that. The default value, 2010001, corresponds to the default buffer size in
+                             synthe.for
         silent         :     Do not print status messages
     """
     startTime = datetime.now()
@@ -252,37 +282,57 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, silent = Fal
     else:
         notify("The ATLAS-9 model has already been adapted to SYNTHE", silent)
 
-    # Generate a launcher command file
-    cards = {
-      's_files': python_path + '/data/synthe_files/',
-      'd_files': python_path + '/data/dfsynthe_files/',
-      'synthe_suite': python_path + '/bin/',
-      'airorvac': 'AIR',
-      'wlbeg': float(min_wl),
-      'wlend': float(max_wl),
-      'resolu': float(res),
-      'turbv': float(vturb),
-      'ifnlte': 0,
-      'linout': 30,
-      'cutoff': 0.0001,
-      'ifpred': 1,
-      'nread': 0,
-      'synthe_solar': output_dir + '/output_synthe.out',
-      'output_dir': output_dir,
-    }
-    file = open(output_dir + '/synthe_launch.com', 'w')
-    file.write(templates.synthe_control.format(**cards))
-    file.close()
-    notify("Launcher created", silent)
+    synthe_num = 0            # Batch number
+    completed = False         # The last batch sets this flag to True
+    current_min_wl = min_wl   # Start wavelength of the current batch
+    while not completed:
+        synthe_num += 1
 
-    # Run SYNTHE
-    cmd('bash {}/synthe_launch.com'.format(output_dir))
-    if not (os.path.isfile(output_dir + '/spectrum.asc')):
-        raise ValueError("SYNTHE did not output expected files")
-    notify("SYNTHE halted", silent)
+        # Determine the end wavelength
+        if synbeg(current_min_wl, max_wl, res) > buffsize:
+            current_max_wl = int(brentq(lambda x: synbeg(current_min_wl, x, res) - buffsize, current_min_wl, max_wl))
+            if current_max_wl == current_min_wl:
+                raise ValueError('Requested resolution too high for buffer size')
+        else:
+            current_max_wl = max_wl
+            completed = True
 
-    # Save data in a NumPy friendly format
-    data = np.loadtxt(output_dir + '/spectrum.asc', unpack = True, skiprows = 2)
+        # Generate a launcher command file
+        cards = {
+          's_files': python_path + '/data/synthe_files/',
+          'd_files': python_path + '/data/dfsynthe_files/',
+          'synthe_suite': python_path + '/bin/',
+          'airorvac': 'AIR',
+          'wlbeg': float(current_min_wl),
+          'wlend': float(current_max_wl),
+          'resolu': float(res),
+          'turbv': float(vturb),
+          'ifnlte': 0,
+          'linout': 30,
+          'cutoff': 0.0001,
+          'ifpred': 1,
+          'nread': 0,
+          'synthe_solar': output_dir + '/output_synthe.out',
+          'output_dir': output_dir,
+          'synthe_num': synthe_num,
+        }
+        file = open(output_dir + '/synthe_launch.com', 'w')
+        file.write(templates.synthe_control.format(**cards))
+        file.close()
+        notify("Launcher created for wavelength range ({}, {}), batch {}. Expected number of points: {} (buffer {})".format(current_min_wl, current_max_wl, synthe_num, synbeg(current_min_wl, current_max_wl, res), buffsize), silent)
+
+        # Run SYNTHE
+        cmd('bash {}/synthe_launch.com'.format(output_dir))
+        if not (os.path.isfile(output_dir + '/synthe_{}/spectrum.asc'.format(cards['synthe_num']))):
+            raise ValueError("SYNTHE did not output expected files")
+        notify("SYNTHE halted", silent)
+
+        current_min_wl = current_max_wl
+
+    # Merge all output files and save the data as ASCII file
+    data = np.empty([4, 0])
+    for i in range(1, synthe_num + 1):
+        data = np.append(data, np.loadtxt(output_dir + '/synthe_{}/spectrum.asc'.format(i), unpack = True, skiprows = 2), axis = 1)
     notify("Total data points: " + str(len(data[0])), silent)
     np.savetxt(output_dir + '/spectrum.dat', data.T, delimiter = ',', header = 'Wavelength [A],Line intensity [erg s^-1 cm^-2 A^-1 strad^-1],Continuum intensity [erg s^-1 cm^-2 A^-1 strad^-1],Intensity ratio')
     notify("Saved the spectrum in spectrum.dat", silent)
@@ -413,6 +463,8 @@ def meta(run_dir):
         raise ValueError('Run directory {} not found!'.format(run_dir))
     if os.path.isfile(run_dir + '/xnfdf.com'):
         return meta_dfsynthe(run_dir)
+    elif os.path.isfile(run_dir + '/output_summary.out'):
+        return meta_atlas(run_dir)
     else:
         raise ValueError('Run {} type unknown!'.format(run_dir))
 
@@ -436,3 +488,206 @@ def meta_dfsynthe(run_dir):
     meta = Settings().abun_atlas_to_std(elements, zscale)
     meta['type'] = 'DFSYNTHE'
     return meta
+
+def reg_search(content, regex, fail_if_not_found = False, return_all = False):
+    """
+    Search for matches to a regular expression in a file
+
+        content             :     File content or filename
+        regex               :     Regular expression
+        fail_if_not_found   :     Throw an error when no matches are found (defaults to False)
+        return_all          :     Return all matches (otherwise, return the first match only) (defaults to False)
+
+    returns:
+        result              :     If "return_all", returns a list of all matched substrings. Otherwise, the first substring only
+        content             :     Content of the file that was searched
+    """
+    if os.path.isfile(content):
+        f = open(content, 'r')
+        content = f.read()
+        f.close()
+    result = re.findall(regex, content)
+    if len(result) == 0:
+        if fail_if_not_found:
+            raise ValueError('Broken file!')
+        else:
+            return False, content
+    if not return_all:
+        result = result[0]
+    return result, content
+
+def meta_atlas(run_dir):
+    """
+    Get meta data for an output directory of an ATLAS/SYNTHE run
+
+    arguments:
+        run_dir        :     Output directory of interest
+    """
+    # Composition
+    file = open(run_dir + '/output_summary.out', 'r')
+    content = file.read()
+    file.close()
+    elements = list(range(100))
+    matches = re.findall('ABUNDANCE +?CHANGE((?: +?[0-9]{1,2} +?[0-9.-]+)+)', content)
+    for match in matches:
+        match = re.findall('[0-9.-]+', match)
+        for element, abun in zip(match[::2], match[1::2]):
+            elements[int(element.strip())] = float(abun.strip())
+    zscale = np.log10(float(re.findall('ABUNDANCE +?SCALE +?([0-9.-eEdD]+)', content)[0]))
+    meta = Settings().abun_atlas_to_std(elements, zscale)
+
+    # Initial model
+    result, content = reg_search(run_dir + '/atlas_control_start.com', 'ln -s (.+) fort.3')
+    meta['restart'] = result
+
+    # ATLAS parameters
+    result, content = reg_search(run_dir + '/atlas_control.com', 'FREQUENCIES *([0-9]+) *([0-9]+) *([0-9]+) *(.+)', return_all = True)
+    meta['ODF_frequency_points'] = int(result[0][0])
+    meta['ODF_start'] = int(result[0][1])
+    meta['ODF_end'] = int(result[0][2])
+    meta['ODF_type'] = result[0][3]
+    result, content = reg_search(content, '\nMOLECULES *(.+)')
+    if result == 'ON':
+        meta['molecules'] = True
+    else:
+        meta['molecules'] = False
+    result, content = reg_search(content, '\nVTURB *(.+)')
+    meta['vturb'] = float(result.lower().replace('D', 'E')) / 1e5
+    result, content = reg_search(content, '\nCONVECTION *([^ ]+) *([^ ]+) *([^ ]+) *(.+)', return_all = True)
+    meta['convection'] = result[0][0]
+    if meta['convection'] == 'OVER':
+        'MLT with overshoot'
+    elif meta['convection'] == 'ON':
+        'MLT without overshoot'
+    elif meta['convection'] == 'OFF':
+        'No convection'
+    else:
+        raise ValueError('Broken convection mode!')
+    meta['mixlen'] = float(result[0][1])
+    meta['overshoot'] = float(result[0][2])
+    meta['nconv'] = int(result[0][3])
+    result, content = reg_search(content, '\nSCALE *([^ ]+) *([^ ]+) *([^ ]+) *([^ ]+) *(.+)', return_all = True)
+    meta['nrhox'] = int(result[0][0])
+    meta['tau_min'] = float(result[0][1])
+    meta['tau_step'] = float(result[0][2])
+    meta['teff'] = float(result[0][3])
+    meta['logg'] = float(result[0][4])
+    meta['type'] = 'ATLAS'
+
+    # SYNTHE parameters
+    if not os.path.isfile(run_dir + '/spectrum.dat'):
+        return meta
+    result, content = reg_search(run_dir + '/synthe_launch.com', '\n(AIR|VAC) +([^ ]{,10}) *([^ ]{,10}) *([^ ]{,10}) *([^ ]{,10}) *([^ ]+) +([^ ]+) +([^ ]+) +([^ ]+) +(.+)', return_all = True)
+    if result[0][0] == 'AIR':
+        meta['synthe_mode'] = 'Air'
+    elif result[0][0] == 'VAC':
+        meta['synthe_mode'] = 'Vacuum'
+    else:
+        raise ValueError('Broken SYNTHE mode!')
+    meta['wl_res'] = float(result[0][3])
+    meta['synthe_vturb'] = float(result[0][4])
+    if int(result[0][5]) == 1:
+        meta['synthe_nlte'] = True
+    else:
+        meta['synthe_nlte'] = False
+    meta['synthe_cutoff'] = float(result[0][7])
+    result, content = reg_search(run_dir + '/synthe_1/synthe.out', 'NLINES= +([0-9]+)')
+    meta['synthe_lines'] = int(result)
+    meta['type'] = 'SYNTHE'
+
+    return meta
+
+def read_structure(run_dir):
+    """
+    Parse the output of ATLAS-9 for profiles of physical properties such as temperature and pressure
+
+    arguments:
+        run_dir        :     Output directory of the ATLAS-9 run of interest
+
+    returns:
+        structure      :     Profiles of physical properties, keyed by a short description of the property,
+                             in each layer starting with the outermost layer
+        units          :     Dictionary with the same keys as "structure" specifying the units of each
+                             profile
+    """
+    if not os.path.isdir(run_dir):
+        raise ValueError('Run directory {} not found!'.format(run_dir))
+    if (not os.path.isfile(run_dir + '/output_last_iteration.out')) or (not os.path.isfile(run_dir + '/output_summary.out')):
+        raise ValueError('Run directory {} does not contain ATLAS-9 output!'.format(run_dir))
+
+    structure = {}
+    units = {}
+
+    file = open(run_dir + '/output_summary.out', 'r')
+    data = file.read()
+    file.close()
+    data = np.loadtxt(data[data.rfind('RHOX'):data.rfind('PRADK')].split('\n'), unpack = True, skiprows = 1)
+    structure['layer'] = np.arange(1, np.shape(data)[1] + 1)
+    units['layer'] = ''
+    structure['temperature'] = data[1]
+    units['temperature'] = 'K'
+    structure['gas_pressure'] = data[2]
+    units['gas_pressure'] = 'Ba'
+    structure['electron_number_density'] = data[3]
+    units['electron_number_density'] = 'cm^-3'
+    structure['rosseland_opacity'] = data[4]
+    units['rosseland_opacity'] = 'cm^2 g^-1'
+    structure['radiative_acceleration'] = data[5]
+    units['radiative_acceleration'] = 'cm s^-2'
+    structure['turbulent_velocity'] = data[6]
+    units['turbulent_velocity'] = 'cm s^-1'
+    structure['radiative_flux'] = data[7]
+    units['radiative_flux'] = 'erg cm^-2 s^-1'
+    structure['convective_speed'] = data[8]
+    units['convective_speed'] = 'cm s^-1'
+    structure['speed_of_sound'] = data[9]
+    units['speed_of_sound'] = 'cm s^-1'
+
+    data = np.loadtxt(run_dir + '/output_last_iteration.out', skiprows = 3, unpack = True)
+    structure['mass_column_density'] = data[1]
+    units['mass_column_density'] = 'g cm^-2'
+    structure['density'] = data[5]
+    units['density'] = 'g cm^-3'
+    structure['physical_depth'] = data[7]
+    units['physical_depth'] = 'km'
+    structure['rosseland_optical_depth'] = data[8]
+    units['rosseland_optical_depth'] = ''
+    structure['convective_flux'] = data[9]
+    units['convective_flux'] = 'erg cm^-2 s^-1'
+    structure['radiation_pressure'] = data[10]
+    units['radiation_pressure'] = 'Ba'
+    structure['flux_error'] = data[11]
+    units['flux_error'] = 'percent'
+    structure['flux_error_derivative'] = data[12]
+    units['flux_error_derivative'] = 'percent'
+
+    return structure, units
+
+def read_spectrum(run_dir, num_bins = -1):
+    """
+    Parse the output of SYNTHE for synthetic spectrum
+
+    arguments:
+        run_dir        :     Output directory of the SYNTHE run of interest
+        num_bins       :     If positive, bin the data into this number of wavelength bins
+
+    returns:
+        Dictionary of four keys. "wl" is the wavelength in A, "flux" is the synthetic flux in
+        erg s^-1 cm^-2 A^-1 strad^-1, "cont" is the continuum of the spectrum in the same units
+        as "flux" and "line" is the ratio between the two
+    """
+    if not os.path.isdir(run_dir):
+        raise ValueError('Run directory {} not found!'.format(run_dir))
+    if not os.path.isfile(run_dir + '/spectrum.dat'):
+        raise ValueError('Run directory {} does not contain SYNTHE output!'.format(run_dir))
+
+    structure = {}
+    units = {}
+
+    wl, flux, cont, line = np.loadtxt(run_dir + '/spectrum.dat', delimiter = ',', unpack = True)
+    if num_bins > 0:
+        wl_binned, flux = bin_spec(wl, flux, num_bins = num_bins)
+        wl_binned, cont = bin_spec(wl, cont, num_bins = num_bins)
+        wl, line = bin_spec(wl, line, num_bins = num_bins)
+
+    return {'wl': wl, 'flux': flux, 'cont': cont, 'line': line}

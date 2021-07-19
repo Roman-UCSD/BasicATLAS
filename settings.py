@@ -38,8 +38,8 @@ class Settings:
             else:
                 atlas_abun = np.round(elements[i] + np.log10((elements[1] + elements[2])) - np.log10(elements[1]) + 12.0 - solar[symbol[Z == i][0]], 2)
             if atlas_abun != 0.0:
-                abun[symbol[Z == i][0]]
-            total_mass += 10 ** (atlas_abun + solar[symbol[Z == i][0]]) * A[Z == i][0]
+                abun[symbol[Z == i][0]] = atlas_abun
+            total_mass += 10 ** (atlas_abun + solar[symbol[Z == i][0]] + zscale) * A[Z == i][0]
 
         # Calculate Helium mass fraction
         helium_mass = elements[2] / (elements[1] / 1e12) * A[Z == 2][0]
