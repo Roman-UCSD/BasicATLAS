@@ -57,6 +57,8 @@ The test is clean if no output is produced.
 ## Examples
 
 * [Constructing the simplest model with solar parameters](https://github.com/Roman-UCSD/BasicATLAS/blob/master/examples/sun_model.ipynb)
+* [Interpreting the detailed output of ATLAS and SYNTHE](https://github.com/Roman-UCSD/BasicATLAS/blob/master/examples/output.ipynb)
+* [Calculating opacity distribution functions and using them for non-solar abundances](https://github.com/Roman-UCSD/BasicATLAS/blob/master/examples/custom_abun.ipynb)
 
 ## MacOS Installation
 
