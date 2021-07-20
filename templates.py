@@ -25,25 +25,25 @@ FREQUENCIES 337 1 337 BIG
 VTURB {vturb}.0E+5
 CONVECTION OVER 1.25 0 36  
 TITLE  BasicATLAS
-SCALE 72 -6.875 0.125 {teff} {gravity}
-ABUNDANCE SCALE   {abundance_scale} ABUNDANCE CHANGE 1 {element_1} 2 {element_2}
- ABUNDANCE CHANGE  3 {element_3}  4 {element_4}  5  {element_5}  6  {element_6}  7  {element_7}  8  {element_8}
- ABUNDANCE CHANGE  9  {element_9} 10  {element_10} 11  {element_11} 12  {element_12} 13  {element_13} 14  {element_14}
- ABUNDANCE CHANGE 15  {element_15} 16  {element_16} 17  {element_17} 18  {element_18} 19  {element_19} 20  {element_20}
- ABUNDANCE CHANGE 21  {element_21} 22  {element_22} 23  {element_23} 24  {element_24} 25  {element_25} 26  {element_26}
- ABUNDANCE CHANGE 27  {element_27} 28  {element_28} 29  {element_29} 30  {element_30} 31  {element_31} 32  {element_32}
- ABUNDANCE CHANGE 33  {element_33} 34  {element_34} 35  {element_35} 36  {element_36} 37  {element_37} 38  {element_38}
- ABUNDANCE CHANGE 39  {element_39} 40  {element_40} 41 {element_41} 42 {element_42} 43 {element_43} 44 {element_44}
- ABUNDANCE CHANGE 45 {element_45} 46 {element_46} 47 {element_47} 48 {element_48} 49 {element_49} 50 {element_50}
- ABUNDANCE CHANGE 51 {element_51} 52  {element_52} 53 {element_53} 54  {element_54} 55 {element_55} 56  {element_56}
- ABUNDANCE CHANGE 57 {element_57} 58 {element_58} 59 {element_59} 60 {element_60} 61 {element_61} 62 {element_62}
- ABUNDANCE CHANGE 63 {element_63} 64 {element_64} 65 {element_65} 66 {element_66} 67 {element_67} 68 {element_68}
- ABUNDANCE CHANGE 69 {element_69} 70 {element_70} 71 {element_71} 72 {element_72} 73 {element_73} 74 {element_74}
- ABUNDANCE CHANGE 75 {element_75} 76 {element_76} 77 {element_77} 78 {element_78} 79 {element_79} 80 {element_80}
- ABUNDANCE CHANGE 81 {element_81} 82 {element_82} 83 {element_83} 84 {element_84} 85 {element_85} 86 {element_86}
- ABUNDANCE CHANGE 87 {element_87} 88 {element_88} 89 {element_89} 90 {element_90} 91 {element_91} 92 {element_92}
- ABUNDANCE CHANGE 93 {element_93} 94 {element_94} 95 {element_95} 96 {element_96} 97 {element_97} 98 {element_98}
- ABUNDANCE CHANGE 99 {element_99}
+SCALE 72 -6.875 0.125 {teff:<6.0f} {gravity:<8.5f}
+ABUNDANCE SCALE {abundance_scale:>9.5f} ABUNDANCE CHANGE 1 {element_1:>7.5f} 2 {element_2:>7.5f}
+ ABUNDANCE CHANGE  3 {element_3:>6.2f}  4 {element_4:>6.2f}  5 {element_5:>6.2f}  6 {element_6:>6.2f}  7 {element_7:>6.2f}  8 {element_8:>6.2f}
+ ABUNDANCE CHANGE  9 {element_9:>6.2f} 10 {element_10:>6.2f} 11 {element_11:>6.2f} 12 {element_12:>6.2f} 13 {element_13:>6.2f} 14 {element_14:>6.2f}
+ ABUNDANCE CHANGE 15 {element_15:>6.2f} 16 {element_16:>6.2f} 17 {element_17:>6.2f} 18 {element_18:>6.2f} 19 {element_19:>6.2f} 20 {element_20:>6.2f}
+ ABUNDANCE CHANGE 21 {element_21:>6.2f} 22 {element_22:>6.2f} 23 {element_23:>6.2f} 24 {element_24:>6.2f} 25 {element_25:>6.2f} 26 {element_26:>6.2f}
+ ABUNDANCE CHANGE 27 {element_27:>6.2f} 28 {element_28:>6.2f} 29 {element_29:>6.2f} 30 {element_30:>6.2f} 31 {element_31:>6.2f} 32 {element_32:>6.2f}
+ ABUNDANCE CHANGE 33 {element_33:>6.2f} 34 {element_34:>6.2f} 35 {element_35:>6.2f} 36 {element_36:>6.2f} 37 {element_37:>6.2f} 38 {element_38:>6.2f}
+ ABUNDANCE CHANGE 39 {element_39:>6.2f} 40 {element_40:>6.2f} 41 {element_41:>6.2f} 42 {element_42:>6.2f} 43 {element_43:>6.2f} 44 {element_44:>6.2f}
+ ABUNDANCE CHANGE 45 {element_45:>6.2f} 46 {element_46:>6.2f} 47 {element_47:>6.2f} 48 {element_48:>6.2f} 49 {element_49:>6.2f} 50 {element_50:>6.2f}
+ ABUNDANCE CHANGE 51 {element_51:>6.2f} 52 {element_52:>6.2f} 53 {element_53:>6.2f} 54 {element_54:>6.2f} 55 {element_55:>6.2f} 56 {element_56:>6.2f}
+ ABUNDANCE CHANGE 57 {element_57:>6.2f} 58 {element_58:>6.2f} 59 {element_59:>6.2f} 60 {element_60:>6.2f} 61 {element_61:>6.2f} 62 {element_62:>6.2f}
+ ABUNDANCE CHANGE 63 {element_63:>6.2f} 64 {element_64:>6.2f} 65 {element_65:>6.2f} 66 {element_66:>6.2f} 67 {element_67:>6.2f} 68 {element_68:>6.2f}
+ ABUNDANCE CHANGE 69 {element_69:>6.2f} 70 {element_70:>6.2f} 71 {element_71:>6.2f} 72 {element_72:>6.2f} 73 {element_73:>6.2f} 74 {element_74:>6.2f}
+ ABUNDANCE CHANGE 75 {element_75:>6.2f} 76 {element_76:>6.2f} 77 {element_77:>6.2f} 78 {element_78:>6.2f} 79 {element_79:>6.2f} 80 {element_80:>6.2f}
+ ABUNDANCE CHANGE 81 {element_81:>6.2f} 82 {element_82:>6.2f} 83 {element_83:>6.2f} 84 {element_84:>6.2f} 85 {element_85:>6.2f} 86 {element_86:>6.2f}
+ ABUNDANCE CHANGE 87 {element_87:>6.2f} 88 {element_88:>6.2f} 89 {element_89:>6.2f} 90 {element_90:>6.2f} 91 {element_91:>6.2f} 92 {element_92:>6.2f}
+ ABUNDANCE CHANGE 93 {element_93:>6.2f} 94 {element_94:>6.2f} 95 {element_95:>6.2f} 96 {element_96:>6.2f} 97 {element_97:>6.2f} 98 {element_98:>6.2f}
+ ABUNDANCE CHANGE 99 {element_99:>6.2f}
 {iterations}
 EOF
 """
@@ -60,25 +60,25 @@ ITERATIONS 1 PRINT 1 PUNCH 0
 TITLE ROSSELAND OPACITY
  OPACITY IFOP 1 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 0 0 0 0
  CONVECTION ON   1.25 TURBULENCE OFF  0.00  0.00  0.00  0.00
-TEFF   {teff}  GRAVITY {gravity} LTE 
-ABUNDANCE SCALE   {abundance_scale} ABUNDANCE CHANGE 1 {element_1} 2 {element_2}
- ABUNDANCE CHANGE  3 {element_3}  4 {element_4}  5  {element_5}  6  {element_6}  7  {element_7}  8  {element_8}
- ABUNDANCE CHANGE  9  {element_9} 10  {element_10} 11  {element_11} 12  {element_12} 13  {element_13} 14  {element_14}
- ABUNDANCE CHANGE 15  {element_15} 16  {element_16} 17  {element_17} 18  {element_18} 19  {element_19} 20  {element_20}
- ABUNDANCE CHANGE 21  {element_21} 22  {element_22} 23  {element_23} 24  {element_24} 25  {element_25} 26  {element_26}
- ABUNDANCE CHANGE 27  {element_27} 28  {element_28} 29  {element_29} 30  {element_30} 31  {element_31} 32  {element_32}
- ABUNDANCE CHANGE 33  {element_33} 34  {element_34} 35  {element_35} 36  {element_36} 37  {element_37} 38  {element_38}
- ABUNDANCE CHANGE 39  {element_39} 40  {element_40} 41 {element_41} 42 {element_42} 43 {element_43} 44 {element_44}
- ABUNDANCE CHANGE 45 {element_45} 46 {element_46} 47 {element_47} 48 {element_48} 49 {element_49} 50 {element_50}
- ABUNDANCE CHANGE 51 {element_51} 52  {element_52} 53 {element_53} 54  {element_54} 55 {element_55} 56  {element_56}
- ABUNDANCE CHANGE 57 {element_57} 58 {element_58} 59 {element_59} 60 {element_60} 61 {element_61} 62 {element_62}
- ABUNDANCE CHANGE 63 {element_63} 64 {element_64} 65 {element_65} 66 {element_66} 67 {element_67} 68 {element_68}
- ABUNDANCE CHANGE 69 {element_69} 70 {element_70} 71 {element_71} 72 {element_72} 73 {element_73} 74 {element_74}
- ABUNDANCE CHANGE 75 {element_75} 76 {element_76} 77 {element_77} 78 {element_78} 79 {element_79} 80 {element_80}
- ABUNDANCE CHANGE 81 {element_81} 82 {element_82} 83 {element_83} 84 {element_84} 85 {element_85} 86 {element_86}
- ABUNDANCE CHANGE 87 {element_87} 88 {element_88} 89 {element_89} 90 {element_90} 91 {element_91} 92 {element_92}
- ABUNDANCE CHANGE 93 {element_93} 94 {element_94} 95 {element_95} 96 {element_96} 97 {element_97} 98 {element_98}
- ABUNDANCE CHANGE 99 {element_99}
+TEFF   5777.  GRAVITY 4.43770 LTE
+ABUNDANCE SCALE {abundance_scale:>9.5f} ABUNDANCE CHANGE 1 {element_1:>7.5f} 2 {element_2:>7.5f}
+ ABUNDANCE CHANGE  3 {element_3:>6.2f}  4 {element_4:>6.2f}  5 {element_5:>6.2f}  6 {element_6:>6.2f}  7 {element_7:>6.2f}  8 {element_8:>6.2f}
+ ABUNDANCE CHANGE  9 {element_9:>6.2f} 10 {element_10:>6.2f} 11 {element_11:>6.2f} 12 {element_12:>6.2f} 13 {element_13:>6.2f} 14 {element_14:>6.2f}
+ ABUNDANCE CHANGE 15 {element_15:>6.2f} 16 {element_16:>6.2f} 17 {element_17:>6.2f} 18 {element_18:>6.2f} 19 {element_19:>6.2f} 20 {element_20:>6.2f}
+ ABUNDANCE CHANGE 21 {element_21:>6.2f} 22 {element_22:>6.2f} 23 {element_23:>6.2f} 24 {element_24:>6.2f} 25 {element_25:>6.2f} 26 {element_26:>6.2f}
+ ABUNDANCE CHANGE 27 {element_27:>6.2f} 28 {element_28:>6.2f} 29 {element_29:>6.2f} 30 {element_30:>6.2f} 31 {element_31:>6.2f} 32 {element_32:>6.2f}
+ ABUNDANCE CHANGE 33 {element_33:>6.2f} 34 {element_34:>6.2f} 35 {element_35:>6.2f} 36 {element_36:>6.2f} 37 {element_37:>6.2f} 38 {element_38:>6.2f}
+ ABUNDANCE CHANGE 39 {element_39:>6.2f} 40 {element_40:>6.2f} 41 {element_41:>6.2f} 42 {element_42:>6.2f} 43 {element_43:>6.2f} 44 {element_44:>6.2f}
+ ABUNDANCE CHANGE 45 {element_45:>6.2f} 46 {element_46:>6.2f} 47 {element_47:>6.2f} 48 {element_48:>6.2f} 49 {element_49:>6.2f} 50 {element_50:>6.2f}
+ ABUNDANCE CHANGE 51 {element_51:>6.2f} 52 {element_52:>6.2f} 53 {element_53:>6.2f} 54 {element_54:>6.2f} 55 {element_55:>6.2f} 56 {element_56:>6.2f}
+ ABUNDANCE CHANGE 57 {element_57:>6.2f} 58 {element_58:>6.2f} 59 {element_59:>6.2f} 60 {element_60:>6.2f} 61 {element_61:>6.2f} 62 {element_62:>6.2f}
+ ABUNDANCE CHANGE 63 {element_63:>6.2f} 64 {element_64:>6.2f} 65 {element_65:>6.2f} 66 {element_66:>6.2f} 67 {element_67:>6.2f} 68 {element_68:>6.2f}
+ ABUNDANCE CHANGE 69 {element_69:>6.2f} 70 {element_70:>6.2f} 71 {element_71:>6.2f} 72 {element_72:>6.2f} 73 {element_73:>6.2f} 74 {element_74:>6.2f}
+ ABUNDANCE CHANGE 75 {element_75:>6.2f} 76 {element_76:>6.2f} 77 {element_77:>6.2f} 78 {element_78:>6.2f} 79 {element_79:>6.2f} 80 {element_80:>6.2f}
+ ABUNDANCE CHANGE 81 {element_81:>6.2f} 82 {element_82:>6.2f} 83 {element_83:>6.2f} 84 {element_84:>6.2f} 85 {element_85:>6.2f} 86 {element_86:>6.2f}
+ ABUNDANCE CHANGE 87 {element_87:>6.2f} 88 {element_88:>6.2f} 89 {element_89:>6.2f} 90 {element_90:>6.2f} 91 {element_91:>6.2f} 92 {element_92:>6.2f}
+ ABUNDANCE CHANGE 93 {element_93:>6.2f} 94 {element_94:>6.2f} 95 {element_95:>6.2f} 96 {element_96:>6.2f} 97 {element_97:>6.2f} 98 {element_98:>6.2f}
+ ABUNDANCE CHANGE 99 {element_99:>6.2f}
 READ DECK6 72 RHOX,T,P,XNE,ABROSS,ACCRAD,VTURB
  5.12838287E-04   3709.1 1.405E+01 2.797E+09 2.600E-04 7.028E-02 1.500E+05 0.000E+00 0.000E+00
  6.71148215E-04   3732.6 1.839E+01 3.602E+09 3.019E-04 7.387E-02 1.500E+05 0.000E+00 0.000E+00
@@ -193,28 +193,28 @@ mv fort.11 xnfpdfmax.dat
 rm fort.*
 """
 
-xnfdf_control = """TEFF   {teff}  GRAVITY {gravity} LTE
+xnfdf_control = """TEFF   5777.  GRAVITY 4.43770 LTE
 TITLE TEMPERATUES AND PRESSURES FOR DISTRIBUTION FUNCTION CALCULATION
  OPACITY IFOP 1 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 0 0 0 0
  CONVECTION ON   1.25 TURBULENCE OFF  0.00  0.00  0.00  0.00
-ABUNDANCE SCALE   {abundance_scale} ABUNDANCE CHANGE 1 {element_1} 2 {element_2}
- ABUNDANCE CHANGE  3 {element_3}  4 {element_4}  5  {element_5}  6  {element_6}  7  {element_7}  8  {element_8}
- ABUNDANCE CHANGE  9  {element_9} 10  {element_10} 11  {element_11} 12  {element_12} 13  {element_13} 14  {element_14}
- ABUNDANCE CHANGE 15  {element_15} 16  {element_16} 17  {element_17} 18  {element_18} 19  {element_19} 20  {element_20}
- ABUNDANCE CHANGE 21  {element_21} 22  {element_22} 23  {element_23} 24  {element_24} 25  {element_25} 26  {element_26}
- ABUNDANCE CHANGE 27  {element_27} 28  {element_28} 29  {element_29} 30  {element_30} 31  {element_31} 32  {element_32}
- ABUNDANCE CHANGE 33  {element_33} 34  {element_34} 35  {element_35} 36  {element_36} 37  {element_37} 38  {element_38}
- ABUNDANCE CHANGE 39  {element_39} 40  {element_40} 41 {element_41} 42 {element_42} 43 {element_43} 44 {element_44}
- ABUNDANCE CHANGE 45 {element_45} 46 {element_46} 47 {element_47} 48 {element_48} 49 {element_49} 50 {element_50}
- ABUNDANCE CHANGE 51 {element_51} 52  {element_52} 53 {element_53} 54  {element_54} 55 {element_55} 56  {element_56}
- ABUNDANCE CHANGE 57 {element_57} 58 {element_58} 59 {element_59} 60 {element_60} 61 {element_61} 62 {element_62}
- ABUNDANCE CHANGE 63 {element_63} 64 {element_64} 65 {element_65} 66 {element_66} 67 {element_67} 68 {element_68}
- ABUNDANCE CHANGE 69 {element_69} 70 {element_70} 71 {element_71} 72 {element_72} 73 {element_73} 74 {element_74}
- ABUNDANCE CHANGE 75 {element_75} 76 {element_76} 77 {element_77} 78 {element_78} 79 {element_79} 80 {element_80}
- ABUNDANCE CHANGE 81 {element_81} 82 {element_82} 83 {element_83} 84 {element_84} 85 {element_85} 86 {element_86}
- ABUNDANCE CHANGE 87 {element_87} 88 {element_88} 89 {element_89} 90 {element_90} 91 {element_91} 92 {element_92}
- ABUNDANCE CHANGE 93 {element_93} 94 {element_94} 95 {element_95} 96 {element_96} 97 {element_97} 98 {element_98}
- ABUNDANCE CHANGE 99 {element_99}
+ABUNDANCE SCALE {abundance_scale:>9.5f} ABUNDANCE CHANGE 1 {element_1:>7.5f} 2 {element_2:>7.5f}
+ ABUNDANCE CHANGE  3 {element_3:>6.2f}  4 {element_4:>6.2f}  5 {element_5:>6.2f}  6 {element_6:>6.2f}  7 {element_7:>6.2f}  8 {element_8:>6.2f}
+ ABUNDANCE CHANGE  9 {element_9:>6.2f} 10 {element_10:>6.2f} 11 {element_11:>6.2f} 12 {element_12:>6.2f} 13 {element_13:>6.2f} 14 {element_14:>6.2f}
+ ABUNDANCE CHANGE 15 {element_15:>6.2f} 16 {element_16:>6.2f} 17 {element_17:>6.2f} 18 {element_18:>6.2f} 19 {element_19:>6.2f} 20 {element_20:>6.2f}
+ ABUNDANCE CHANGE 21 {element_21:>6.2f} 22 {element_22:>6.2f} 23 {element_23:>6.2f} 24 {element_24:>6.2f} 25 {element_25:>6.2f} 26 {element_26:>6.2f}
+ ABUNDANCE CHANGE 27 {element_27:>6.2f} 28 {element_28:>6.2f} 29 {element_29:>6.2f} 30 {element_30:>6.2f} 31 {element_31:>6.2f} 32 {element_32:>6.2f}
+ ABUNDANCE CHANGE 33 {element_33:>6.2f} 34 {element_34:>6.2f} 35 {element_35:>6.2f} 36 {element_36:>6.2f} 37 {element_37:>6.2f} 38 {element_38:>6.2f}
+ ABUNDANCE CHANGE 39 {element_39:>6.2f} 40 {element_40:>6.2f} 41 {element_41:>6.2f} 42 {element_42:>6.2f} 43 {element_43:>6.2f} 44 {element_44:>6.2f}
+ ABUNDANCE CHANGE 45 {element_45:>6.2f} 46 {element_46:>6.2f} 47 {element_47:>6.2f} 48 {element_48:>6.2f} 49 {element_49:>6.2f} 50 {element_50:>6.2f}
+ ABUNDANCE CHANGE 51 {element_51:>6.2f} 52 {element_52:>6.2f} 53 {element_53:>6.2f} 54 {element_54:>6.2f} 55 {element_55:>6.2f} 56 {element_56:>6.2f}
+ ABUNDANCE CHANGE 57 {element_57:>6.2f} 58 {element_58:>6.2f} 59 {element_59:>6.2f} 60 {element_60:>6.2f} 61 {element_61:>6.2f} 62 {element_62:>6.2f}
+ ABUNDANCE CHANGE 63 {element_63:>6.2f} 64 {element_64:>6.2f} 65 {element_65:>6.2f} 66 {element_66:>6.2f} 67 {element_67:>6.2f} 68 {element_68:>6.2f}
+ ABUNDANCE CHANGE 69 {element_69:>6.2f} 70 {element_70:>6.2f} 71 {element_71:>6.2f} 72 {element_72:>6.2f} 73 {element_73:>6.2f} 74 {element_74:>6.2f}
+ ABUNDANCE CHANGE 75 {element_75:>6.2f} 76 {element_76:>6.2f} 77 {element_77:>6.2f} 78 {element_78:>6.2f} 79 {element_79:>6.2f} 80 {element_80:>6.2f}
+ ABUNDANCE CHANGE 81 {element_81:>6.2f} 82 {element_82:>6.2f} 83 {element_83:>6.2f} 84 {element_84:>6.2f} 85 {element_85:>6.2f} 86 {element_86:>6.2f}
+ ABUNDANCE CHANGE 87 {element_87:>6.2f} 88 {element_88:>6.2f} 89 {element_89:>6.2f} 90 {element_90:>6.2f} 91 {element_91:>6.2f} 92 {element_92:>6.2f}
+ ABUNDANCE CHANGE 93 {element_93:>6.2f} 94 {element_94:>6.2f} 95 {element_95:>6.2f} 96 {element_96:>6.2f} 97 {element_97:>6.2f} 98 {element_98:>6.2f}
+ ABUNDANCE CHANGE 99 {element_99:>6.2f}
 READ DECK6 25 RHOX,T,P,XNE,ABROSS,ACCRAD,VTURB,CONVFRAC,VCONV
    1.000E-4   {dft}  1.000E-4  0 0 0 0 0
    3.162E-4   {dft}  3.162E-4  0 0 0 0 0

@@ -147,12 +147,25 @@ class Settings:
         else:
             Y = self.Y
 
-        if ODF['zscale'] != self.zscale:
+        if np.abs(ODF['zscale'] - self.zscale) > 0.01:
             raise ValueError('Incomplatible ODF: ODF calculated for zscale={} as opposed to {}'.format(ODF['zscale'], self.zscale))
-        if not np.isclose(ODF['Y'], Y):
+        if np.abs(ODF['Y'] - Y) > 0.001:
             raise ValueError('Incomplatible ODF: ODF calculated for Y={} as opposed to {}'.format(ODF['Y'], Y))
         if ODF['abun'] != self.abun:
             raise ValueError('Incomplatible ODF: ODF calculated for enhancements {} as opposed to {}'.format(dict(ODF['abun']), dict(self.abun)))
+
+    @property
+    def zscale(self):
+        return self._zscale
+
+    # ATLAS takes metallicity on linear scale in the 9.5F format (9 spaces, 5 decimal places). We must make sure that the provided
+    # value of metallicity can be accurately represented in this format
+    @zscale.setter
+    def zscale(self, d):
+        formatted = float('{:>9.5f}'.format(10 ** d))
+        if formatted == 0.0 or np.abs(np.log10(formatted) - d) > 0.01:
+            raise ValueError('Underflow in zscale value')
+        self._zscale = d
 
     def __init__(self):
         self.teff = 5770.0

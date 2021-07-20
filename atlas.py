@@ -139,16 +139,16 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
       'output_1': output_dir + '/output_main.out',
       'output_2': output_dir + '/output_summary.out',
       'atlas_exe': python_path + '/bin/atlas9mem.exe',
-      'abundance_scale': str(10 ** float(settings.zscale)),
-      'teff': str(float(settings.teff)),
-      'gravity': str(float(settings.logg)),
-      'vturb': str(settings.vturb),
+      'abundance_scale': 10 ** float(settings.zscale),
+      'teff': settings.teff,
+      'gravity': settings.logg,
+      'vturb': str(int(settings.vturb)),
       'output_dir': output_dir,
     }
     for z, abundance in enumerate(settings.atlas_abun()):
-        cards['element_' + str(z)] = str(round(float(abundance), 2))
-    cards['element_1'] = str(float(settings.atlas_abun()[1]))
-    cards['element_2'] = str(float(settings.atlas_abun()[2]))
+        cards['element_' + str(z)] = abundance
+    cards['element_1'] = settings.atlas_abun()[1]
+    cards['element_2'] = settings.atlas_abun()[2]
     if niter != 0:
         cards.update({'iterations': templates.atlas_iterations.format(iterations = '15') * int(np.floor(int(niter) / 15))})
         if int(niter) % 15 != 0:
@@ -371,16 +371,14 @@ def dfsynthe(output_dir, settings, silent = False):
     # Generate the XNFDF command file
     cards = {
       'd_data': python_path + '/data/dfsynthe_files/',
-      'abundance_scale': str(float(10 ** settings.zscale)),
-      'teff': str(float(settings.teff)),
-      'gravity': str(float(settings.logg)),
+      'abundance_scale': 10 ** settings.zscale,
       'dfsynthe_suite': python_path + '/bin/',
       'output_dir': output_dir,
     }
     for z, abundance in enumerate(settings.atlas_abun()):
-        cards['element_' + str(z)] = str(round(float(abundance), 2))
-    cards['element_1'] = str(float(settings.atlas_abun()[1]))
-    cards['element_2'] = str(float(settings.atlas_abun()[2]))
+        cards['element_' + str(z)] = float(abundance)
+    cards['element_1'] = settings.atlas_abun()[1]
+    cards['element_2'] = settings.atlas_abun()[2]
     file = open(output_dir + '/xnfdf.com', 'w')
     file.write(templates.xnfdf_control_start.format(**cards))
     for dft in dfts:
