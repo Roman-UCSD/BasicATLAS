@@ -197,6 +197,7 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
                 notify("The model is unlikely to converge any better ;(", silent)
                 break
     notify("ATLAS-9 halted", silent)
+    validate_run(output_dir)
     
     cmd('bash {}/atlas_control_end.com'.format(output_dir))
     if not (os.path.isfile(cards['output_1']) and os.path.isfile(cards['output_2'])):
@@ -326,6 +327,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2
         if not (os.path.isfile(output_dir + '/synthe_{}/spectrum.asc'.format(cards['synthe_num']))):
             raise ValueError("SYNTHE did not output expected files")
         notify("SYNTHE halted", silent)
+        validate_run(output_dir)
 
         current_min_wl = current_max_wl
 
@@ -449,6 +451,7 @@ def dfsynthe(output_dir, settings, silent = False):
     file.close()
     cmd('bash {}/kapreadts.com'.format(output_dir))
     notify('Merged all velocities in a single table. Final output saved in kappa.ros', silent)
+    validate_run(output_dir)
 
 def meta(run_dir):
     """
@@ -459,141 +462,238 @@ def meta(run_dir):
     """
     if not os.path.isdir(run_dir):
         raise ValueError('Run directory {} not found!'.format(run_dir))
-    if os.path.isfile(run_dir + '/xnfdf.com'):
+    if os.path.isfile(run_dir + '/xnfdf.out'):
         return meta_dfsynthe(run_dir)
-    elif os.path.isfile(run_dir + '/output_summary.out'):
+    elif os.path.isfile(run_dir + '/output_main.out'):
         return meta_atlas(run_dir)
     else:
         raise ValueError('Run {} type unknown!'.format(run_dir))
 
 def meta_dfsynthe(run_dir):
     """
-    Get meta data for an output directory of a DFSYNTHE run
+    Get meta data for an output directory (DFSYNTHE)
 
     arguments:
         run_dir        :     Output directory of interest
-    """
-    file = open(run_dir + '/xnfdf.com', 'r')
-    content = file.read()
-    file.close()
-    elements = list(range(100))
-    matches = re.findall('ABUNDANCE +?CHANGE((?: +?[0-9]{1,2} +?[0-9.-]+)+)', content)
-    for match in matches:
-        match = re.findall('[0-9.-]+', match)
-        for element, abun in zip(match[::2], match[1::2]):
-            elements[int(element.strip())] = float(abun.strip())
-    zscale = np.log10(float(re.findall('ABUNDANCE +?SCALE +?([0-9.-eEdD]+)', content)[0]))
-    meta = Settings().abun_atlas_to_std(elements, zscale)
-    meta['type'] = 'DFSYNTHE'
-    return meta
-
-def reg_search(content, regex, fail_if_not_found = False, return_all = False):
-    """
-    Search for matches to a regular expression in a file
-
-        content             :     File content or filename
-        regex               :     Regular expression
-        fail_if_not_found   :     Throw an error when no matches are found (defaults to False)
-        return_all          :     Return all matches (otherwise, return the first match only) (defaults to False)
 
     returns:
-        result              :     If "return_all", returns a list of all matched substrings. Otherwise, the first substring only
-        content             :     Content of the file that was searched
+        A dictionary of meta data with the following keys:
+            abun         :       Enhancements of individual chemical elements [dex over solar]
+            Y            :       Helium mass fraction
+            zscale       :       Metallicity, [M/H] [dex over solar]
+            type         :       Set to "DFSYNTHE" for a DFSYNTHE run
     """
-    if os.path.isfile(content):
-        f = open(content, 'r')
-        content = f.read()
-        f.close()
-    result = re.findall(regex, content)
-    if len(result) == 0:
-        if fail_if_not_found:
-            raise ValueError('Broken file!')
-        else:
-            return False, content
-    if not return_all:
-        result = result[0]
-    return result, content
+    elements_received, params_received = parse_atlas_abundances(run_dir + '/xnfdf.out', classic_style = False, lookbehind = 1, params = ['0XSCALE'])
+    output = Settings().abun_atlas_to_std(elements_received, np.log10(params_received['0XSCALE']))
+    output['type'] = 'DFSYNTHE'
+    return output
 
 def meta_atlas(run_dir):
     """
-    Get meta data for an output directory of an ATLAS/SYNTHE run
+    Get meta data for an output directory (ATLAS, SYNTHE)
 
     arguments:
         run_dir        :     Output directory of interest
+
+    returns:
+        A dictionary of meta data with the following keys:
+            abun         :       Enhancements of individual chemical elements [dex over solar]
+            Y            :       Helium mass fraction
+            zscale       :       Metallicity, [M/H] [dex over solar]
+            teff         :       Effective temperature [K]
+            logg         :       Surface gravity [log10(CGS)]
+            vturb        :       Turbulent velocity [km/s]
+            type         :       Set to "ATLAS" for a pure ATLAS-9 run or "SYNTHE" for an ATLAS/SYNTHE run
+            res          :       If synthe == True, resolution of the spectrum (lambda/delta_lambda)
+            synthe_vturb :       Turbulent velocity in SYNTHE [km/s]
     """
-    # Composition
-    file = open(run_dir + '/output_summary.out', 'r')
-    content = file.read()
-    file.close()
-    elements = list(range(100))
-    matches = re.findall('ABUNDANCE +?CHANGE((?: +?[0-9]{1,2} +?[0-9.-]+)+)', content)
-    for match in matches:
-        match = re.findall('[0-9.-]+', match)
-        for element, abun in zip(match[::2], match[1::2]):
-            elements[int(element.strip())] = float(abun.strip())
-    zscale = np.log10(float(re.findall('ABUNDANCE +?SCALE +?([0-9.-eEdD]+)', content)[0]))
-    meta = Settings().abun_atlas_to_std(elements, zscale)
+    elements_received, params_received = parse_atlas_abundances(run_dir + '/output_main.out', classic_style = False, lookbehind = 2, params = ['0XSCALE', 'TEFF', 'LOG G'])
+    output = Settings().abun_atlas_to_std(elements_received, np.log10(params_received['0XSCALE']))
+    output['teff'] = params_received['TEFF']
+    output['logg'] = params_received['LOG G']
+    vturb = validate_run(run_dir, return_received_vturb = True)
+    output['vturb'] = vturb * 1e-5
+    output['type'] = 'ATLAS'
 
-    # Initial model
-    result, content = reg_search(run_dir + '/atlas_control_start.com', 'ln -s (.+) fort.3')
-    meta['restart'] = result
+    if os.path.isfile(run_dir + '/synthe_launch.com'):
+        output['type'] = 'SYNTHE'
+        synthe_params = validate_run(run_dir, return_received_synthe = True)
+        output['res'] = synthe_params['resolu']
+        output['synthe_vturb'] = synthe_params['turbv']
 
-    # ATLAS parameters
-    result, content = reg_search(run_dir + '/atlas_control.com', 'FREQUENCIES *([0-9]+) *([0-9]+) *([0-9]+) *(.+)', return_all = True)
-    meta['ODF_frequency_points'] = int(result[0][0])
-    meta['ODF_start'] = int(result[0][1])
-    meta['ODF_end'] = int(result[0][2])
-    meta['ODF_type'] = result[0][3]
-    result, content = reg_search(content, '\nMOLECULES *(.+)')
-    if result == 'ON':
-        meta['molecules'] = True
-    else:
-        meta['molecules'] = False
-    result, content = reg_search(content, '\nVTURB *(.+)')
-    meta['vturb'] = float(result.lower().replace('D', 'E')) / 1e5
-    result, content = reg_search(content, '\nCONVECTION *([^ ]+) *([^ ]+) *([^ ]+) *(.+)', return_all = True)
-    meta['convection'] = result[0][0]
-    if meta['convection'] == 'OVER':
-        'MLT with overshoot'
-    elif meta['convection'] == 'ON':
-        'MLT without overshoot'
-    elif meta['convection'] == 'OFF':
-        'No convection'
-    else:
-        raise ValueError('Broken convection mode!')
-    meta['mixlen'] = float(result[0][1])
-    meta['overshoot'] = float(result[0][2])
-    meta['nconv'] = int(result[0][3])
-    result, content = reg_search(content, '\nSCALE *([^ ]+) *([^ ]+) *([^ ]+) *([^ ]+) *(.+)', return_all = True)
-    meta['nrhox'] = int(result[0][0])
-    meta['tau_min'] = float(result[0][1])
-    meta['tau_step'] = float(result[0][2])
-    meta['teff'] = float(result[0][3])
-    meta['logg'] = float(result[0][4])
-    meta['type'] = 'ATLAS'
+    return output
 
-    # SYNTHE parameters
-    if not os.path.isfile(run_dir + '/spectrum.dat'):
-        return meta
-    result, content = reg_search(run_dir + '/synthe_launch.com', '\n(AIR|VAC) +([^ ]{,10}) *([^ ]{,10}) *([^ ]{,10}) *([^ ]{,10}) *([^ ]+) +([^ ]+) +([^ ]+) +([^ ]+) +(.+)', return_all = True)
-    if result[0][0] == 'AIR':
-        meta['synthe_mode'] = 'Air'
-    elif result[0][0] == 'VAC':
-        meta['synthe_mode'] = 'Vacuum'
-    else:
-        raise ValueError('Broken SYNTHE mode!')
-    meta['wl_res'] = float(result[0][3])
-    meta['synthe_vturb'] = float(result[0][4])
-    if int(result[0][5]) == 1:
-        meta['synthe_nlte'] = True
-    else:
-        meta['synthe_nlte'] = False
-    meta['synthe_cutoff'] = float(result[0][7])
-    result, content = reg_search(run_dir + '/synthe_1/synthe.out', 'NLINES= +([0-9]+)')
-    meta['synthe_lines'] = int(result)
-    meta['type'] = 'SYNTHE'
+def parse_atlas_abundances(file, classic_style = True, lookahead = 0, lookbehind = 0, params = [], to_float = True):
+    """
+    Load chemical abundances as well as other auxiliary parameters from one of the ATLAS/SYNTHE/DFSYNTHE files
 
-    return meta
+    arguments:
+        file              :         File to read abundances from
+        classic_style     :         If True, the "classic" style of abundance listing is assumed, i.e. the one with
+                                    "ABUNDANCE CHANGE" and "ABUNDANCE SCALE". E.g. in atlas_control.com. Otherwise,
+                                    the explicit style is assumed with symbols of chemical elements such as the one
+                                    in output_main.out
+        lookahead         :         Auxiliary parameter definitions will be searched within the lines of the abundance
+                                    listing as well as this many lines after the abundance listing
+        lookbehind        :         Auxiliary parameter definitions will be searched within the lines of the abundance
+                                    listing as well as this many lines behind the abundance listing
+        params            :         Names of auxiliary parameters to search for. For example, "TEFF". If a parameter
+                                    has multiple values (e.g. "SCALE 72 -6.875 0.125 6000   6.00000"), the numerical
+                                    index of the required value must be specified after "/". E.g. "SCALE/1" for 72,
+                                    "SCALE/2" for -6.875 etc
+        to_float          :         Typecast retrieved values of auxiliary parameters to float
+    """
+    f = open(file, 'r')
+    content = f.read()
+    f.close()
+    elements = [0]
+
+    if not classic_style:
+        symbols = Settings().abun_solar().keys()
+        start = re.search('LI[0-9 .-]+BE[0-9 .-]+B', content).span()[0]
+        end = re.search('BK[0-9 .-]+CF[0-9 .-]+ES[0-9 .-]+', content).span()[1]
+        start = content[:content[:start].rfind('\n')].rfind('\n')
+        element_listing = content[start : end]
+        for symbol in symbols:
+            elements += [float(re.findall('[^A-Z]{}([0-9 .-]+)'.format(symbol.upper() + ' ' * (2 - len(symbol))), element_listing)[0].strip())]
+    else:
+        start = re.search('ABUNDANCE CHANGE +3 +[0-9.-]+ +4 +[0-9.-]+ +5 +', content).span()[0]
+        end = re.search('ABUNDANCE CHANGE +99 +[0-9.-]+ ?', content).span()[1]
+        start = content[:content[:start].rfind('\n')].rfind('\n')
+        element_listing = content[start:end]
+        for i in range(1, 100):
+            elements += [float(re.findall('[^0-9]{} +([0-9-]+\.[0-9]+)'.format(i), element_listing)[0].strip())]
+
+    if len(params) != 0:
+        for i in range(lookbehind):
+            start = content[:start].rfind('\n')
+        for i in range(lookahead):
+            end += content[end:].find('\n') + 1
+        listing = content[start:end]
+
+        output_params = {}
+        for param in params:
+            regex = '{} +([^ \\n]+)'
+            if len(param.split('/')) == 2:
+                depth = int(param.split('/')[1])
+                regex = regex.format(param.split('/')[0])
+                for i in range(depth - 1):
+                    regex = regex.replace('(', '').replace(')', '') + ' +([^ \\n]+)'
+            else:
+                regex = regex.format(param)
+            output_params[param] = re.findall(regex, listing)[0]
+            if to_float:
+                output_params[param] = float(output_params[param])
+        return elements, output_params
+
+    return elements
+
+def validate_run(run_dir, return_received_vturb = False, return_received_synthe = False, silent = False):
+    """
+    Confirm that the input values provided to ATLAS/SYNTHE/DFSYNTHE in a given run match the ATLAS/SYNTHE/DFSYNHTE's
+    interpretation of them. Due to the explicit formatting requirements, sometimes this is not the case. The run
+    of interest is specified in "run_dir" (type is identified automatically). Returns True when the validation
+    passes and raises an exception when it does not
+
+    arguments:
+        run_dir                  :           Directory with output of the run requiring validation
+        return_received_vturb    :           If the run is an ATLAS run, abort validation and return the value of
+                                             VTURB received by ATLAS
+        return_received_synthe   :           If the run is a SYNTHE run, abort validation and return the values of
+                                             all parameters received by SYNTHE as a dictionary
+        silent                   :           Do not print status messages (none will be printed regardless if
+                                             return_received_vturb or return_received_synthe is set to True)
+    """
+    if not os.path.isdir(run_dir):
+        raise ValueError('Run directory {} not found!'.format(run_dir))
+
+    # ATLAS run
+    if os.path.isfile(run_dir + '/atlas_control.com'):
+        elements_requested, params_requested = parse_atlas_abundances(run_dir + '/atlas_control.com', lookbehind = 4, params = ['VTURB', 'ABUNDANCE SCALE', 'SCALE 72/3', 'SCALE 72/4'])
+        elements_received, params_received = parse_atlas_abundances(run_dir + '/output_main.out', classic_style = False, lookbehind = 2, params = ['0XSCALE', 'TEFF', 'LOG G'])
+
+        # Determine the received value of VTURB
+        f = open(run_dir + '/output_main.out', 'r')
+        content = f.read()
+        f.close()
+        start = content.find('RHOX         T        P        XNE')
+        start = content[start:].find('\n') + start
+        end = start
+        for i in range(2):
+            end += content[end:].find('\n') + 1
+        vturb_received = float(np.loadtxt([content[start:end].strip()], dtype = str)[7])
+        if return_received_vturb:
+            return vturb_received
+
+        # Check for matches and raise exceptions
+        for i in range(len(elements_requested)):
+            if elements_requested[i] != elements_received[i]:
+                raise ValueError('Element {} requested/received mismatch: {} vs {}'.format(i, elements_requested[i], elements_received[i]))
+        if params_requested['ABUNDANCE SCALE'] != params_received['0XSCALE']:
+            raise ValueError('Metallicity requested/received mismatch: {} vs {}'.format(params_requested['ABUNDANCE SCALE'], params_received['0XSCALE']))
+        if params_requested['SCALE 72/3'] != params_received['TEFF']:
+            raise ValueError('Teff requested/received mismatch: {} vs {}'.format(params_requested['SCALE 72/3'], params_received['TEFF']))
+        if params_requested['SCALE 72/4'] != params_received['LOG G']:
+            raise ValueError('Log(g) requested/received mismatch: {} vs {}'.format(params_requested['SCALE 72/4'], params_received['LOG G']))
+        if params_requested['VTURB'] != vturb_received:
+            raise ValueError('Vturb requested/received mismatch: {} vs {}'.format(params_requested['VTURB'], vturb_received))
+        if not return_received_synthe:
+            notify('ATLAS requested/received validation for {} successful'.format(run_dir), silent)
+
+    # SYNTHE run
+    if os.path.isfile(run_dir + '/synthe_launch.com'):
+        # Read the requested values
+        f = open(run_dir + '/synthe_launch.com', 'r')
+        content = f.read()
+        f.close()
+        start = content.find('AIRorVAC  WLBEG     WLEND     RESOLU    TURBV  IFNLTE')
+        for i in range(2):
+            start = content[:start].rfind('\n')
+        end = start + content[start + 1:].find('\n') + 1
+        content = content[start:end].strip()
+        params_requested = {
+            'wlbeg': float(content[10:20].strip()),
+            'wlend': float(content[20:30].strip()),
+            'resolu': float(content[30:40].strip()),
+            'turbv': float(content[40:50].strip()),
+            'ifnlte': float(content[50:53].strip()),
+            'linout': float(content[53:60].strip()),
+            'cutoff': float(content[60:70].strip()),
+            'ifpred': float(content[70:75].strip()),
+            'nread': float(content[75:80].strip()),
+        }
+
+        # Determine the index of the most recent SYNTHE run
+        synthe_index = 1
+        while os.path.isdir(run_dir + '/synthe_{}'.format(synthe_index + 1)):
+            synthe_index += 1
+
+        # Get received values from the most recent SYNTHE run
+        f = open(run_dir + '/synthe_{}/synbeg.out'.format(synthe_index), 'r')
+        content = f.read()
+        f.close()
+        params_received = {}
+        for param in params_requested:
+            params_received[param] = float(re.findall('{}={{0,1}} *([^ \\n]+)'.format(param.upper()), content)[0])
+            if params_requested[param] != params_received[param]:
+                raise ValueError('{} requested/received mismatch: {} vs {}'.format(param, params_requested[param], params_received[param]))
+        if return_received_synthe:
+            return params_received
+        notify('SYNTHE requested/received validation for {} successful'.format(run_dir), silent)
+
+    # DFSYNTHE run
+    if os.path.isfile(run_dir + '/xnfdf.com'):
+        for requested_file, received_file in zip(['xnfdf.com', 'kappa9v0.com'], ['xnfdf.out', 'kapm40k2.out']):
+            elements_requested, params_requested = parse_atlas_abundances(run_dir + '/{}'.format(requested_file), lookbehind = 1, params = ['ABUNDANCE SCALE'])
+            elements_received, params_received = parse_atlas_abundances(run_dir + '/{}'.format(received_file), classic_style = False, lookbehind = 1, params = ['0XSCALE'])
+            for i in range(len(elements_requested)):
+                if elements_requested[i] != elements_received[i]:
+                    raise ValueError('Element {} requested/received mismatch: {} vs {}'.format(i, elements_requested[i], elements_received[i]))
+            if params_requested['ABUNDANCE SCALE'] != params_received['0XSCALE']:
+                raise ValueError('Metallicity requested/received mismatch: {} vs {}'.format(params_requested['ABUNDANCE SCALE'], params_received['0XSCALE']))
+        notify('DFSYNTHE requested/received validation for {} successful'.format(run_dir), silent)
+
+    return True
 
 def read_structure(run_dir):
     """

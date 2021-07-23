@@ -247,26 +247,26 @@ BEGIN
 
 dfsynthe_control_start = """
 cd {output_dir}
-mv ./xnfpdf.dat fort.10
-mv ./xnfpdfmax.dat fort.22
-mv {d_data}/lowlinesdf.bin fort.11
-mv {d_data}/highlinesdf.bin fort.21
-mv {d_data}/diatomicsdf.bin fort.31
-mv {d_data}/tiolinesdf.bin fort.41
-mv {d_data}/h2olinesdf.bin fort.43
-mv {d_data}/nltelinesdf.bin fort.51
+ln -s ./xnfpdf.dat fort.10
+ln -s ./xnfpdfmax.dat fort.22
+ln -s {d_data}/lowlinesdf.bin fort.11
+ln -s {d_data}/highlinesdf.bin fort.21
+ln -s {d_data}/diatomicsdf.bin fort.31
+ln -s {d_data}/tiolinesdf.bin fort.41
+ln -s {d_data}/h2olinesdf.bin fort.43
+ln -s {d_data}/nltelinesdf.bin fort.51
 """
 
 dfsynthe_control_end = """
 cd {output_dir}
-mv fort.10 ./xnfpdf.dat
-mv fort.22 ./xnfpdfmax.dat
-mv fort.11 {d_data}/lowlinesdf.bin
-mv fort.21 {d_data}/highlinesdf.bin
-mv fort.31 {d_data}/diatomicsdf.bin
-mv fort.41 {d_data}/tiolinesdf.bin
-mv fort.43 {d_data}/h2olinesdf.bin
-mv fort.51 {d_data}/nltelinesdf.bin
+rm fort.10
+rm fort.22
+rm fort.11
+rm fort.21
+rm fort.31
+rm fort.41
+rm fort.43
+rm fort.51
 """
 
 dfsynthe_control = """

@@ -42,7 +42,7 @@ rm fort.*
 rm repacknlte.out
 
 # Patch ATLAS-9 to give additional output
-patch src/atlas9mem.for <<EOF
+patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
 61c661
 <      1HEIGHT(J),TAUROS(J),FLXCNVratio(J),ACCRAD(J),FLXERR(J),FLXDRV(J),
 ---
@@ -66,7 +66,7 @@ patch src/atlas9mem.for <<EOF
 EOF
 
 # Compile patched ATLAS-9
-gfortran -o bin/atlas9mem.exe src/atlas9mem.for -finit-local-zero -fno-automatic -w -std=legacy
+gfortran -o bin/atlas9mem.exe src/atlas9mem.patched.for -finit-local-zero -fno-automatic -w -std=legacy
 
 # Compile SYNTHE
 gfortran -fno-automatic -w -O3 -c src/xnfpelsyn.for -std=legacy
