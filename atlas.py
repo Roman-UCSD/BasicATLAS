@@ -13,6 +13,9 @@ import templates
 # Path to the home directory of the library
 python_path = os.path.dirname(os.path.realpath(__file__))
 
+# Where to look for restart files
+restart_paths = [python_path + '/restarts']
+
 def notify(message, silent):
     """
     Print message "message" if "silent" is True. This function is used in place of prints throughout the code to allow
@@ -89,7 +92,7 @@ def atlas_converged(run_dir):
         de = 99999.999
     return err, de
 
-def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/ap00t5750g45k2.dat', niter = 0, ODF = python_path + '/data/solar_ODF', silent = False):
+def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = python_path + '/data/solar_ODF', silent = False):
     """
     Run ATLAS-9 to calculate a model stellar atmosphere
 
@@ -126,11 +129,8 @@ def atlas(output_dir, settings = Settings(), restart = python_path + '/restarts/
         vturb_available = [i for o in map(lambda x: re.findall('p00big([0-9]+)\.bdf', x), os.listdir(ODF)) for i in o]
         raise ValueError('ODF not calculated for vturb={}. Available vturb: {}'.format(settings.vturb, vturb_available))
 
-    # Check restart file
-    if os.path.isfile(restart):
-        copyfile(restart, output_dir + '/restart.dat')
-    else:
-        raise ValueError('Restart file {} not found'.format(restart))
+    # Prepare restart
+    prepare_restart(restart, output_dir + '/restart.dat', teff = settings.teff, logg = settings.logg, zscale = settings.zscale)
     
     # Generate a launcher command file
     cards = {
@@ -789,3 +789,84 @@ def read_spectrum(run_dir, num_bins = -1):
         wl, line = bin_spec(wl, line, num_bins = num_bins)
 
     return {'wl': wl, 'flux': flux, 'cont': cont, 'line': line}
+
+def load_restarts():
+    """
+    Words...
+    """
+    files = []
+    for restart_path in restart_paths:
+        files += list(np.char.add(restart_path + '/', os.listdir(restart_path)))
+    teff = []; logg = []; zscale = []; restarts = []
+
+    for file in files:
+        restarts += [file]
+        if os.path.isdir(file) and os.path.isfile(file + '/output_summary.out'):
+            model_meta = meta(file)
+            teff += [model_meta['teff']]
+            logg += [model_meta['logg']]
+            zscale += [model_meta['zscale']]
+        elif os.path.isfile(file):
+            f = open(file, 'r')
+            content = f.read()
+            f.close()
+            model_meta = [re.findall('TEFF *([0-9.eE-]+)', content), re.findall('ABUNDANCE SCALE *([0-9.eE-]+)', content), re.findall('GRAVITY *([0-9.eE-]+)', content)]
+            if len(model_meta[0]) == 1 and len(model_meta[1]) == 1 and len(model_meta[2]) == 1:
+                teff += [float(model_meta[0][0])]
+                logg += [float(model_meta[2][0])]
+                zscale += [np.log10(float(model_meta[1][0]))]
+            else:
+                restarts = restarts[:-1]
+        else:
+            restarts = restarts[:-1]
+
+    return {'restarts': np.array(restarts), 'teff': np.array(teff), 'logg': np.array(logg), 'zscale': np.array(zscale)}
+
+def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = False):
+    """
+    Words...
+    """
+    tau_std = np.logspace(-6.875, 2.0, 72)
+
+    if restart == 'grey':
+        temp = teff * ((3/4) * (tau_std + (2/3))) ** (1/4)
+        tau = tau_std
+
+    elif restart == 'auto':
+        restarts = load_restarts()
+        distance = ((teff - restarts['teff']) / (10000 - 3000)) ** 2.0 + ((logg - restarts['logg']) / (6.0 - 0.0)) ** 2.0 + ((zscale - restarts['zscale']) / (2.0 - (-2.0))) ** 2.0
+        best_restart = restarts['restarts'][distance == np.min(distance)][0]
+        notify('Automatically chosen restart: {}'.format(best_restart), False)
+        return prepare_restart(restart = best_restart, save_to = save_to, teff = teff, logg = logg, zscale = zscale, silent = silent)
+
+    elif os.path.isdir(restart):
+        structure, units = read_structure(restart)
+        teff = meta(restart)['teff']
+        tau = structure['rosseland_optical_depth']
+        temp = structure['temperature']
+
+    elif os.path.isfile(restart):
+        f = open(restart, 'r')
+        content = f.read()
+        f.close()
+        teff = re.findall('TEFF *([0-9.eE-]+)', content)
+        content = re.findall('FLXCNV,VCONV,VELSND(.+)PRADK', content, re.DOTALL)
+        if len(content) != 1 or len(teff) != 1:
+            raise ValueError('{} is not a valid restart file'.format(restart))
+        teff = float(teff[0])
+        rhox, temp, kappa = np.loadtxt(content[0].split('\n'), unpack = True, usecols = [0, 1, 4])
+        dtau = (kappa[1:] + kappa[:-1]) / 2.0 * np.diff(rhox)
+        tau = np.cumsum(np.r_[rhox[0] * kappa[0], dtau])
+
+    temp = np.interp(tau_std, tau, temp)
+    tau = tau_std
+    kappa = np.ones(np.shape(tau))
+    drhox = np.diff(tau) / (kappa[1:] + kappa[:-1]) * 2.0
+    rhox = np.cumsum(np.r_[tau[0] / kappa[0], drhox])
+
+    structure = ''
+    for i in range(len(tau)):
+        structure += ('{:>15.8E}{:>9.1f}' + '{:>10.3E}' * 8).format(rhox[i], temp[i], 0.0, 0.0, kappa[i], 0.0, 0.0, 0.0, 0.0, 0.0) + '\n'
+    f = open(save_to, 'w')
+    f.write(templates.atlas_restart.format(structure = ' ' + structure.strip(), teff = teff))
+    f.close()
