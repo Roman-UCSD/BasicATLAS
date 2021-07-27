@@ -1,6 +1,6 @@
 ### TEMPLATES OF CONTROL FILES ###
 
-atlas_restart = """TEFF  {teff:<6.1f}  GRAVITY 0.00000 LTE 
+atlas_restart = """TEFF  {teff:<6.0f}  GRAVITY 0.00000 LTE 
 TITLE  Restart                                   
  OPACITY IFOP 1 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 0 0 0 0
  CONVECTION ON   0.00 TURBULENCE OFF  0.00  0.00  0.00  0.00

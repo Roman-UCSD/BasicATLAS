@@ -140,7 +140,7 @@ class Settings:
         solar = self.abun_solar()
         total_mass = 0.0
         for element in solar:
-            total_mass += 10 ** solar[element] * A[symbol == element][0]
+            total_mass += 10 ** (solar[element] + self.zscale * (Z[symbol == element][0] > 2.0)) * A[symbol == element][0]
         Y_solar = 10 ** solar['He'] * A[symbol == 'He'][0] / total_mass
         if self.Y < 0.0 or self.Y > 1.0:
             Y = Y_solar

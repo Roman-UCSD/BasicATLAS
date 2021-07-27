@@ -834,7 +834,7 @@ def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = F
 
     elif restart == 'auto':
         restarts = load_restarts()
-        distance = ((teff - restarts['teff']) / (10000 - 3000)) ** 2.0 + ((logg - restarts['logg']) / (6.0 - 0.0)) ** 2.0 + ((zscale - restarts['zscale']) / (2.0 - (-2.0))) ** 2.0
+        distance = ((teff - restarts['teff']) / (10000 - 3000)) ** 2.0 + ((logg - restarts['logg']) / (6.0 - 0.0)) ** 2.0 + ((zscale - restarts['zscale']) / (4.0 - (-4.0))) ** 2.0
         best_restart = restarts['restarts'][distance == np.min(distance)][0]
         notify('Automatically chosen restart: {}'.format(best_restart), False)
         return prepare_restart(restart = best_restart, save_to = save_to, teff = teff, logg = logg, zscale = zscale, silent = silent)
@@ -850,7 +850,7 @@ def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = F
         content = f.read()
         f.close()
         teff = re.findall('TEFF *([0-9.eE-]+)', content)
-        content = re.findall('FLXCNV,VCONV,VELSND(.+)PRADK', content, re.DOTALL)
+        content = re.findall('FLX...,VCONV,VELSND(.+)PRADK', content, re.DOTALL)
         if len(content) != 1 or len(teff) != 1:
             raise ValueError('{} is not a valid restart file'.format(restart))
         teff = float(teff[0])
