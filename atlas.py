@@ -99,9 +99,12 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
     arguments:
         output_dir     :     Directory to store the output. Must NOT exist
         settings       :     Object of class Settings() with atmosphere parameters
-        restart        :     Initial model to jump start the calculation. This can point either to a file of type
-                             "output_summary.out" (e.g. from restarts/) or the output directory of an existing ATLAS run
-        niter          :     Number of iterations. Use 0 to iterate until convergence
+        restart        :     Initial guess for the temperature profile (restart). This can point either to a file of type
+                             "output_summary.out" (e.g. from restarts/) or the output directory of an existing ATLAS run.
+                             Set to "auto" to select the closest restart file (by teff, logg, zscale) from the library
+                             of available restarts in atlas.restart_paths. Alternatively, set to "grey" to use a grey
+                             atmosphere profile under the two-stream approximation
+        niter          :     Number of iterations. Use 0 to iterate until convergence (or lack of progress)
         ODF            :     Output directory of a DFSYNTHE run with required Opacity Distribution Functions and Rosseland
                              mean opacities
         silent         :     Do not print status messages
@@ -792,8 +795,22 @@ def read_spectrum(run_dir, num_bins = -1):
 
 def load_restarts():
     """
-    Words...
+    Collect effective temperatures, gravities and metallicities of all restart models available to
+    the autoselection routine. The paths where such models are stored are listed in restart_paths
+    which by default only includes restarts/, i.e. the restart files that come with BasicATLAS.
+
+    The function recognizes both individual model files (of output_summary.out style) and ATLAS
+    run directories. All files/directories that do not comply with either of the two formats are
+    disregarded
+    
+    returns:
+        Dictionary with the following keys:
+            restarts          :           List of all found restarts (files or directories)
+            teff              :           Corresponding effective temperatures [K]
+            logg              :           Corresponding surface gravities [log10(CGS)]
+            zscale            :           Corresponding metallicities [M/H] in dex
     """
+    # First collect paths to all files in the listed restart directories
     files = []
     for restart_path in restart_paths:
         files += list(np.char.add(restart_path + '/', os.listdir(restart_path)))
@@ -801,11 +818,13 @@ def load_restarts():
 
     for file in files:
         restarts += [file]
+        # If the restart is a run directory...
         if os.path.isdir(file) and os.path.isfile(file + '/output_summary.out'):
             model_meta = meta(file)
             teff += [model_meta['teff']]
             logg += [model_meta['logg']]
             zscale += [model_meta['zscale']]
+        # If the restart is an output_summary.out style model file
         elif os.path.isfile(file):
             f = open(file, 'r')
             content = f.read()
@@ -824,19 +843,40 @@ def load_restarts():
 
 def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = False):
     """
-    Words...
+    Prepare a restart model for an ATLAS run. The function can take a calculated model as input,
+    autoselect a model from the available library of restarts or compile a grey atmosphere restart
+
+    arguments:
+        restart        :         To choose a specific restart model, insert the path to the model here.
+                                 The model may be a single model file in output_summary.out style or an
+                                 entire run directory of a previous ATLAS run. To autoselect a model from
+                                 the available library set to "auto". To initialize a grey atmosphere,
+                                 set to "grey"
+        save_to        :         Path to save the restart file
+        teff           :         Target effective temperature. In case of grey atmosphere, the parameter
+                                 is necessary to calculate the temperature profile. Otherwise, ATLAS needs
+                                 to know this parameter to properly scale the trial temperature profile
+        logg           :         Only necessary if restart=="auto" to choose an appropriate restart model
+                                 from the library
+        zscale         :         Likewise, needed to choose the most appropriate restart from library
+        silent         :         Do not print status messages
     """
+    # The "standard" grid of optical depth points (Rosseland) spanning accross 72 layers between 1e-6.875 and
+    # 1e2. Note that the number of layers and the outer bound can in principle be changed in ATLAS configuration;
+    # however the values are hard-coded in the BasicATLAS dispatcher template and hard-coded here as well
     tau_std = np.logspace(-6.875, 2.0, 72)
 
-    if restart == 'grey':
-        temp = teff * ((3/4) * (tau_std + (2/3))) ** (1/4)
+    if restart == 'grey' or restart == 'gray':                  # Allow both spellings
+        temp = teff * ((3/4) * (tau_std + (2/3))) ** (1/4)      # Two-stream approximation grey atmosphere
         tau = tau_std
 
     elif restart == 'auto':
         restarts = load_restarts()
+        # Distance formula to be minimized for the best choice of model
         distance = ((teff - restarts['teff']) / (10000 - 3000)) ** 2.0 + ((logg - restarts['logg']) / (6.0 - 0.0)) ** 2.0 + ((zscale - restarts['zscale']) / (4.0 - (-4.0))) ** 2.0
         best_restart = restarts['restarts'][distance == np.min(distance)][0]
         notify('Automatically chosen restart: {}'.format(best_restart), False)
+        # Call ourselves recursively but with "auto" replaced with the chosen model
         return prepare_restart(restart = best_restart, save_to = save_to, teff = teff, logg = logg, zscale = zscale, silent = silent)
 
     elif os.path.isdir(restart):
@@ -854,16 +894,25 @@ def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = F
         if len(content) != 1 or len(teff) != 1:
             raise ValueError('{} is not a valid restart file'.format(restart))
         teff = float(teff[0])
+        # output_summary.out style model files do not provide optical depth. Instead it must be
+        # calculated from mass column density and Rosseland opacity which are provided
         rhox, temp, kappa = np.loadtxt(content[0].split('\n'), unpack = True, usecols = [0, 1, 4])
         dtau = (kappa[1:] + kappa[:-1]) / 2.0 * np.diff(rhox)
         tau = np.cumsum(np.r_[rhox[0] * kappa[0], dtau])
 
+    # Interpolate the temperature profile to the standard grid
     temp = np.interp(tau_std, tau, temp)
     tau = tau_std
+    # ATLAS requires mass column density and Rosseland opacity in every layer instead of optical depth
+    # as the independent variable in the trial temperature profile. What it will be ultimately using is
+    # however the optical depth, so we can give ATLAS any values for both variables as long as together
+    # they are consistent with the right grid of optical depths. Below we just set all opacities to unity
+    # and then calculate the right mass column density
     kappa = np.ones(np.shape(tau))
     drhox = np.diff(tau) / (kappa[1:] + kappa[:-1]) * 2.0
     rhox = np.cumsum(np.r_[tau[0] / kappa[0], drhox])
 
+    # Generate the restart file in the appropriate format and save it
     structure = ''
     for i in range(len(tau)):
         structure += ('{:>15.8E}{:>9.1f}' + '{:>10.3E}' * 8).format(rhox[i], temp[i], 0.0, 0.0, kappa[i], 0.0, 0.0, 0.0, 0.0, 0.0) + '\n'
