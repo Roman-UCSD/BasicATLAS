@@ -552,6 +552,9 @@ def parse_atlas_abundances(file, classic_style = True, lookahead = 0, lookbehind
     elements = [0]
 
     if not classic_style:
+        # Small correction to make sure a space is present after 0XSCALE when the number that follows is too long
+        content = content.replace('0XSCALE', '0XSCALE ')
+
         symbols = Settings().abun_solar().keys()
         start = re.search('LI[0-9 .-]+BE[0-9 .-]+B', content).span()[0]
         end = re.search('BK[0-9 .-]+CF[0-9 .-]+ES[0-9 .-]+', content).span()[1]
@@ -812,7 +815,7 @@ def load_restarts():
     """
     # First collect paths to all files in the listed restart directories
     files = []
-    for restart_path in restart_paths:
+    for restart_path in set(restart_paths):
         files += list(np.char.add(restart_path + '/', os.listdir(restart_path)))
     teff = []; logg = []; zscale = []; restarts = []
 
@@ -826,9 +829,13 @@ def load_restarts():
             zscale += [model_meta['zscale']]
         # If the restart is an output_summary.out style model file
         elif os.path.isfile(file):
-            f = open(file, 'r')
-            content = f.read()
-            f.close()
+            try:
+                f = open(file, 'r')
+                content = f.read()
+                f.close()
+            except:
+                restarts = restarts[:-1]
+                continue
             model_meta = [re.findall('TEFF *([0-9.eE-]+)', content), re.findall('ABUNDANCE SCALE *([0-9.eE-]+)', content), re.findall('GRAVITY *([0-9.eE-]+)', content)]
             if len(model_meta[0]) == 1 and len(model_meta[1]) == 1 and len(model_meta[2]) == 1:
                 teff += [float(model_meta[0][0])]
@@ -899,6 +906,8 @@ def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = F
         rhox, temp, kappa = np.loadtxt(content[0].split('\n'), unpack = True, usecols = [0, 1, 4])
         dtau = (kappa[1:] + kappa[:-1]) / 2.0 * np.diff(rhox)
         tau = np.cumsum(np.r_[rhox[0] * kappa[0], dtau])
+    else:
+        raise ValueError('{} is an invalid choice of restart'.format(restart))
 
     # Interpolate the temperature profile to the standard grid
     temp = np.interp(tau_std, tau, temp)

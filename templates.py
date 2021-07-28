@@ -373,7 +373,7 @@ rm fort.*
 # synberg.exe initializes the computation. It feeds on the computation parameters such as the wavelength range
 # (WLBEG to WLEND), resolution and more...
 {synthe_suite}/synbeg.exe<<"EOF">synbeg.out
-{airorvac:<3s}       {wlbeg:<10.4f}{wlend:<10.4f}{resolu:<10.4f}{turbv:<10.4f}{ifnlte:<3d}{linout:<7d}{cutoff:<10.5f}{ifpred:<5d}{nread:<5d}
+{airorvac:<3s}       {wlbeg:<10.4f}{wlend:<10.4f}{resolu:<9.2f} {turbv:<10.4f}{ifnlte:<3d}{linout:<7d}{cutoff:<10.5f}{ifpred:<5d}{nread:<5d}
 AIRorVAC  WLBEG     WLEND     RESOLU    TURBV  IFNLTE LINOUT CUTOFF        NREAD
 EOF
 
