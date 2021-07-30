@@ -53,7 +53,7 @@ FREQUENCIES 337 1 337 BIG
 VTURB {vturb}.0E+5
 CONVECTION OVER 1.25 0 36  
 TITLE  BasicATLAS
-SCALE 72 -6.875 0.125 {teff:<6.0f} {gravity:<8.5f}
+SCALE 72 -6.875 0.125 {teff:<6.0f} {gravity:<7.4f}
 ABUNDANCE SCALE {abundance_scale:>9.5f} ABUNDANCE CHANGE 1 {element_1:>7.5f} 2 {element_2:>7.5f}
  ABUNDANCE CHANGE  3 {element_3:>6.2f}  4 {element_4:>6.2f}  5 {element_5:>6.2f}  6 {element_6:>6.2f}  7 {element_7:>6.2f}  8 {element_8:>6.2f}
  ABUNDANCE CHANGE  9 {element_9:>6.2f} 10 {element_10:>6.2f} 11 {element_11:>6.2f} 12 {element_12:>6.2f} 13 {element_13:>6.2f} 14 {element_14:>6.2f}

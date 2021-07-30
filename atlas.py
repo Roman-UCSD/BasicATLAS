@@ -35,7 +35,7 @@ def cmd(command):
     if stdout != '':
         print(stdout)
     if stderr != '':
-        print(stderr)
+        raise ValueError('Command {} returned an error: {}'.format(command, stderr))
 
 def bin_spec(wl, flux, num_bins = 1000):
     """
@@ -133,7 +133,7 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
         raise ValueError('ODF not calculated for vturb={}. Available vturb: {}'.format(settings.vturb, vturb_available))
 
     # Prepare restart
-    prepare_restart(restart, output_dir + '/restart.dat', teff = settings.teff, logg = settings.logg, zscale = settings.zscale)
+    prepare_restart(restart, output_dir + '/restart.dat', teff = settings.teff, logg = settings.logg, zscale = settings.effective_zscale())
     
     # Generate a launcher command file
     cards = {

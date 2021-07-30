@@ -172,6 +172,25 @@ class Settings:
         total_mass = total_mass + hydrogen_mass + helium_mass
         return hydrogen_mass / total_mass, helium_mass / total_mass, (1 - hydrogen_mass / total_mass - helium_mass / total_mass)
 
+    def effective_zscale(self):
+        """
+        Calculate the "effective" metallicity of the current settings, i.e. the value of metallicity, [M/H], that would result
+        in the same hydrogen, helium and metal mass fractions (see mass_fractions()) under purely (scaled) solar abundances
+        """
+        # Get atomic numbers, weights and symbols of all chemical elements
+        Z, A = np.loadtxt(python_path + '/data/solar.csv', usecols = [0, 1], unpack = True, delimiter = ',')
+        symbol = np.loadtxt(python_path + '/data/solar.csv', usecols = [5], unpack = True, delimiter = ',', dtype = str)
+        mass_fractions = self.mass_fractions()
+
+        elements = self.abun_solar()
+        metal_mass = 0.0
+        for element in elements:
+            if element != 'H' and element != 'He':
+                metal_mass += A[symbol == element][0] * 10 ** (elements[element])
+        hydrogen_mass = 10 ** elements['H'] * A[symbol == 'H'][0]
+
+        return np.log10((hydrogen_mass * mass_fractions[2]) / (metal_mass * mass_fractions[0]))
+
     @property
     def zscale(self):
         return self._zscale
