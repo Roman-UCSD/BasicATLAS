@@ -492,3 +492,10 @@ rm fort.*
 rm xnfpelsyn.dat
 rm spectrum.bin    # Remove binaries
 """
+
+synthe_cleanup = """cd {output_dir}
+rm -f output_synthe.out
+rm -f synthe_launch.com
+rm -f spectrum.dat
+rm -rf synthe_*
+"""

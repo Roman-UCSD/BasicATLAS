@@ -250,7 +250,7 @@ def synbeg(min_wl, max_wl, res):
         wllast = np.e ** (ixwlend * ratiolg)
     return int(ixwlend - ixwlbeg + 1)
 
-def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2010001, silent = False):
+def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2010001, overwrite_prev = False, silent = False):
     """
     Run SYNTHE to calculate the emergent spectrum corresponding to an existing ATLAS model
 
@@ -265,6 +265,8 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2
                              introduced as SYNTHE allocates a buffer of finite size and cannot handle more wavelength
                              points than that. The default value, 2010001, corresponds to the default buffer size in
                              synthe.for
+        overwrite_prev :     If True, will remove any output of previous SYNTHE runs in the run directory before startup.
+                             If False (default), an error is thrown when a previous SYNTHE run is discovered
         silent         :     Do not print status messages
     """
     startTime = datetime.now()
@@ -273,6 +275,17 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2
     output_dir = os.path.realpath(output_dir)
     if not (os.path.isfile(output_dir + '/output_main.out') and os.path.isfile(output_dir + '/output_summary.out')):
         raise ValueError('ATLAS run output not found in {}'.format(output_dir))
+
+    # Check that SYNTHE has not already ran
+    if os.path.isdir(output_dir + '/synthe_1'):
+        if not overwrite_prev:
+            raise ValueError('Previous SYNTHE run output found in {}. To overwrite, set overwrite_prev=True'.format(output_dir))
+        else:
+            file = open(output_dir + '/synthe_cleanup.com', 'w')
+            file.write(templates.synthe_cleanup.format(output_dir = output_dir))
+            file.close()
+            cmd('bash {}/synthe_cleanup.com'.format(output_dir))
+            notify("Removed the output of a previous SYNTHE run", silent)
 
     # Prepare a SYNTHE friendly file
     if not (os.path.isfile(output_dir + '/output_synthe.out')):
