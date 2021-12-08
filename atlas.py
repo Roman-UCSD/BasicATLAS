@@ -565,8 +565,9 @@ def parse_atlas_abundances(file, classic_style = True, lookahead = 0, lookbehind
     elements = [0]
 
     if not classic_style:
-        # Small correction to make sure a space is present after 0XSCALE when the number that follows is too long
+        # Small correction to make sure a space is present after 0XSCALE and TEFF when the number that follows is too long
         content = content.replace('0XSCALE', '0XSCALE ')
+        content = content.replace('TEFF', 'TEFF ')
 
         symbols = Settings().abun_solar().keys()
         start = re.search('LI[0-9 .-]+BE[0-9 .-]+B', content).span()[0]
@@ -760,7 +761,11 @@ def read_structure(run_dir):
     structure['speed_of_sound'] = data[9]
     units['speed_of_sound'] = 'cm s^-1'
 
-    data = np.loadtxt(run_dir + '/output_last_iteration.out', skiprows = 3, unpack = True)
+    # Replace all "*" with 9s. "*" are returned when the number cannot be represented otherwise
+    f = open(run_dir + '/output_last_iteration.out', 'r')
+    data = f.read().replace('*', '9').split('\n')
+    f.close()
+    data = np.loadtxt(data, skiprows = 3, unpack = True)
     structure['mass_column_density'] = data[1]
     units['mass_column_density'] = 'g cm^-2'
     structure['density'] = data[5]
