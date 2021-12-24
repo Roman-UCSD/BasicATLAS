@@ -151,8 +151,11 @@ class Settings:
             raise ValueError('Incomplatible ODF: ODF calculated for zscale={} as opposed to {}'.format(ODF['zscale'], self.zscale))
         if np.abs(ODF['Y'] - Y) > 0.001:
             raise ValueError('Incomplatible ODF: ODF calculated for Y={} as opposed to {}'.format(ODF['Y'], Y))
-        if ODF['abun'] != self.abun:
-            raise ValueError('Incomplatible ODF: ODF calculated for enhancements {} as opposed to {}'.format(dict(ODF['abun']), dict(self.abun)))
+        atlas_abun = self.abun_std_to_atlas(ODF['Y'], ODF['zscale'], ODF['abun'])
+        for element in ODF['abun']:
+            # We have to be careful here as sometimes discrepancies are due to the ODF abundance being floored (cannot go below -20 in ATLAS format)
+            if ODF['abun'][element] != self.abun[element] and not (atlas_abun[int(Z[symbol == element][0])] == -20.0 and ODF['abun'][element] > self.abun[element]):
+                raise ValueError('Incomplatible ODF: ODF calculated for enhancements {} as opposed to {}'.format(dict(ODF['abun']), dict(self.abun)))
 
     def mass_fractions(self):
         """

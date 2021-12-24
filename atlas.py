@@ -6,6 +6,8 @@ from shutil import copyfile
 import subprocess
 import time
 from scipy.optimize import brentq
+from scipy.optimize import minimize
+import scipy.constants as spc
 
 from settings import Settings
 import templates
@@ -44,6 +46,42 @@ def bin_spec(wl, flux, num_bins = 1000):
     hist_sum = np.histogram(wl, bins = num_bins, weights = flux)
     hist_count = np.histogram(wl, bins = num_bins)
     return np.array(hist_sum[1][1:] + hist_sum[1][:-1])[hist_count[0] > 0] / 2.0, hist_sum[0][hist_count[0] > 0] / hist_count[0][hist_count[0] > 0]
+
+def blackbody(nu, T):
+    """
+    Implementation of Planck's law in SI for frequency "nu" (in Hz) and temperature "T" (in K)
+    """
+    if spc.h * nu / spc.k / T < 675 and np.e ** (spc.h * nu / spc.k / T) - 1 > 0.0:
+        return 2 * spc.h * nu ** 3.0 / spc.c ** 2.0 / (np.e ** (spc.h * nu / spc.k / T) - 1)
+    else:
+        return 0.0
+
+def blackbody_peak(T):
+    """
+    Find the peak frequency and value of blackbody() using Wien's displacement law for a given temperature "T" (in K)
+    """
+    max_nu = 5.8789232e10 * T
+    max_fun = blackbody(max_nu, T)
+    return max_nu, max_fun
+
+def blackbody_dBdT(nu, T):
+    """
+    Implementation of the derivative of Planck's law with respect to temperature in SI for a grid of frequencies "nu"
+    (in Hz) and temperature "T" (in K)
+    """
+    if spc.h * nu / spc.k / T < 350 and np.e ** (spc.h * nu / spc.k / T) - 1 > 0:
+        return 2 * spc.h ** 2.0 * nu ** 4.0 / (spc.c ** 2.0 * spc.k * T ** 2.0) * np.e ** (spc.h * nu / spc.k / T) / (np.e ** (spc.h * nu / spc.k / T) - 1) ** 2.0
+    else:
+        return 0.0
+
+def blackbody_dBdT_peak(T):
+    """
+    Find the peak frequency and value of blackbody_dBdT() using Wien's displacement law for a given temperature "T" (in K) using
+    numerical optimization
+    """
+    max_nu = minimize(lambda x, T: -blackbody_dBdT(x[0], T[0]), 2.8214391 / spc.h * spc.k * T, args = [T], method = 'Nelder-Mead').x
+    max_fun = blackbody_dBdT(max_nu, T)
+    return max_nu, max_fun
 
 def atlas_converged(run_dir):
     """
@@ -223,6 +261,36 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
     data[2] = 0.000001 * data[2]    # Bars conversion
     np.savetxt(output_dir + '/model.dat', data.T, delimiter = ',', header = 'Mass Column Density [g cm^-2],Temperature [K],Pressure [Bar]')
     notify("Saved the model in model.dat", silent)
+
+    # ATLAS carries out all frequency integrations over a fixed range of wavelengths that may not be large enough to accommodate
+    # very high temperatures (>200 kK). Here we check if the frequency range is appropriate for the entire temperature run of the model
+    # and display an error if it is not
+    frequencies = []
+    reading = False
+    with open(cards['output_1']) as f:
+        for line in f:
+            if line.find('0FREQID') != -1:
+                reading = True
+                continue
+            if reading and len(line) < 60:
+                break
+            if reading:
+                # Minus signs in integration coefficients break the output format. Under normal circumstances
+                # all integration coefficients should be positive, but the first coefficient may be negative if
+                # the frequency grid has been artificially extended short of ~8 nm as ATLAS will assume 8 nm
+                # to be the shortest wavelength regardless
+                line = line.replace('-', ' -')
+                frequencies += list(np.loadtxt([line])[1::3])
+    frequencies = np.array(sorted(frequencies))
+    structure, units = read_structure(output_dir)
+    for temperature in [np.min(structure['temperature']), np.max(structure['temperature'])]:
+        for nu in [np.min(frequencies), np.max(frequencies)]:
+            planck_peak = blackbody_peak(temperature)[1]
+            planck_dT_peak = blackbody_dBdT_peak(temperature)[1]
+            if blackbody(nu, temperature) > 1e-3 * planck_peak:
+                raise ValueError('Planck\'s law in one of the layers at temperature {} K does not vanish at the frequency grid bound {} Hz. The result may be inaccurate!'.format(temperature, nu))
+            if blackbody_dBdT(nu, temperature) > 1e-3 * planck_dT_peak:
+                raise ValueError('Derivative of Planck\'s law (dB/dT) in one of the layers at temperature {} K does not vanish at the frequency grid bound {} Hz. The result may be inaccurate!'.format(temperature, nu))
 
     notify("Finished running ATLAS-9 in " + str(datetime.now() - startTime) + " s", silent)
 
