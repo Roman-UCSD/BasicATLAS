@@ -6,7 +6,6 @@ from shutil import copyfile
 import subprocess
 import time
 from scipy.optimize import brentq
-from scipy.optimize import minimize
 import scipy.constants as spc
 
 from settings import Settings
@@ -76,10 +75,13 @@ def blackbody_dBdT(nu, T):
 
 def blackbody_dBdT_peak(T):
     """
-    Find the peak frequency and value of blackbody_dBdT() using Wien's displacement law for a given temperature "T" (in K) using
-    numerical optimization
+    Find the peak frequency and value of blackbody() using Wien's displacement law equivalent
+    for dB/dT for a given temperature "T"
+
+    The constant used here (3.8300160963) is a numerical solution to:
+        x^2 * coth(x / 2) == 4x
     """
-    max_nu = minimize(lambda x, T: -blackbody_dBdT(x[0], T[0]), 2.8214391 / spc.h * spc.k * T, args = [T], method = 'Nelder-Mead').x
+    max_nu = 3.8300160963 / spc.h * spc.k * T
     max_fun = blackbody_dBdT(max_nu, T)
     return max_nu, max_fun
 
@@ -130,7 +132,7 @@ def atlas_converged(run_dir):
         de = 99999.999
     return err, de
 
-def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = python_path + '/data/solar_ODF', silent = False):
+def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = python_path + '/data/solar_ODF', molecules = True, silent = False):
     """
     Run ATLAS-9 to calculate a model stellar atmosphere
 
@@ -145,6 +147,8 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
         niter          :     Number of iterations. Use 0 to iterate until convergence (or lack of progress)
         ODF            :     Output directory of a DFSYNTHE run with required Opacity Distribution Functions and Rosseland
                              mean opacities
+        molecules      :     If True (default), model formation of molecules. When set to False, atomic number densities
+                             are evaluated by solving the Saha equation exactly and may therefore be more precise
         silent         :     Do not print status messages
     """
     startTime = datetime.now()
@@ -185,6 +189,7 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
       'gravity': settings.logg,
       'vturb': str(int(settings.vturb)),
       'output_dir': output_dir,
+      'enable_molecules': ['OFF', 'ON'][molecules]
     }
     for z, abundance in enumerate(settings.atlas_abun()):
         cards['element_' + str(z)] = abundance
@@ -291,6 +296,26 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
                 raise ValueError('Planck\'s law in one of the layers at temperature {} K does not vanish at the frequency grid bound {} Hz. The result may be inaccurate!'.format(temperature, nu))
             if blackbody_dBdT(nu, temperature) > 1e-3 * planck_dT_peak:
                 raise ValueError('Derivative of Planck\'s law (dB/dT) in one of the layers at temperature {} K does not vanish at the frequency grid bound {} Hz. The result may be inaccurate!'.format(temperature, nu))
+
+    # Also check that the temperatures in all layers are within the ODF range
+    ODF_temps = []
+    ODF_pres = []
+    reading = False
+    with open(ODF + '/xnfdf.com') as f:
+        for line in f:
+            if line.find('RHOX,T,P,XNE,ABROSS,ACCRAD,VTURB,CONVFRAC,VCONV') != -1:
+                reading = True
+                continue
+            if len(line) < 10:
+                reading = False
+                continue
+            if reading:
+                line = np.loadtxt([line])
+                ODF_temps += [line[1]]
+                ODF_pres += [line[2]]
+    for temperature in [np.min(structure['temperature']), np.max(structure['temperature'])]:
+        if temperature < np.min(ODF_temps) or temperature > np.max(ODF_temps):
+            raise ValueError('Gas temperature {} K  in one of the layers falls outside the ODF range [{}, {}]. The result may be inaccurate!'.format(temperature, np.min(ODF_temps), np.max(ODF_temps)))
 
     notify("Finished running ATLAS-9 in " + str(datetime.now() - startTime) + " s", silent)
 

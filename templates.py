@@ -47,7 +47,7 @@ cd {output_dir}
 {atlas_exe}<<"EOF">{output_1}
 READ KAPPA
 READ PUNCH
-MOLECULES ON
+MOLECULES {enable_molecules}
 READ MOLECULES
 FREQUENCIES 337 1 337 BIG
 VTURB {vturb}.0E+5
