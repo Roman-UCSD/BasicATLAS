@@ -109,6 +109,10 @@ class Settings:
             # ATLAS behaves weirdly when abundances are given below -20.0. At -20.0 the element effectively does not exist
             if elements[i] < -20.0:
                 elements[i] = -20.0
+
+        if float('{:>7.5f}'.format(elements[1])) == 0.0:
+            raise ValueError('Underflow in Y value. Hydrogen abundance cannot be zero!')
+
         return elements
 
     def abun_solar(self):
@@ -166,14 +170,14 @@ class Settings:
         symbol = np.loadtxt(python_path + '/data/solar.csv', usecols = [5], unpack = True, delimiter = ',', dtype = str)
 
         elements = self.atlas_abun()
-        total_mass = 0.0
+        metal_mass = 0.0
         for i, element in enumerate(elements):
             if i > 2:
-                total_mass += 10 ** (element + self.zscale) * (1e12 + 1e12 * (elements[2] / elements[1])) * A[Z == i][0]
+                metal_mass += 10 ** (element + self.zscale) * (1e12 + 1e12 * (elements[2] / elements[1])) * A[Z == i][0]
         hydrogen_mass = 1e12 * A[Z == 1][0]
         helium_mass = 1e12 * (elements[2] / elements[1]) * A[Z == 2][0]
-        total_mass = total_mass + hydrogen_mass + helium_mass
-        return hydrogen_mass / total_mass, helium_mass / total_mass, (1 - hydrogen_mass / total_mass - helium_mass / total_mass)
+        total_mass = metal_mass + hydrogen_mass + helium_mass
+        return hydrogen_mass / total_mass, helium_mass / total_mass, metal_mass / total_mass
 
     def effective_zscale(self):
         """

@@ -101,6 +101,10 @@ def atlas_converged(run_dir):
     # the last mention of "TEFF" in the file are the table we need.
     file = open(run_dir + '/output_last_iteration.out', 'w')
 
+    # TTAUP() prints pressure errors and exits when it cannot solve for hydrostatic equilibrium
+    if convergence.find('0ERROR') != -1:
+        raise ValueError('The run halted as no hydrostatic equilibrium configuration could be found for the prescribed temperature.')
+
     # The table is generally space-separated, but negative signs can occasionally overflow the columns and replace the separating
     # spaces, which will confuse np.loadtxt() that I intend to use later. We want to replace all "-" with " -" to ensure that there
     # is a space in front of every number. However, "-" are also present in the scientific notation (e.g. 1.0E-10), which do not need
@@ -243,7 +247,7 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
                 notify("The model is unlikely to converge any better ;(", silent)
                 break
     notify("ATLAS-9 halted", silent)
-    validate_run(output_dir)
+    validate_run(output_dir, silent = silent)
     
     cmd('bash {}/atlas_control_end.com'.format(output_dir))
     if not (os.path.isfile(cards['output_1']) and os.path.isfile(cards['output_2'])):
@@ -436,7 +440,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2
         if not (os.path.isfile(output_dir + '/synthe_{}/spectrum.asc'.format(cards['synthe_num']))):
             raise ValueError("SYNTHE did not output expected files")
         notify("SYNTHE halted", silent)
-        validate_run(output_dir)
+        validate_run(output_dir, silent = silent)
 
         current_min_wl = current_max_wl
 
@@ -560,7 +564,7 @@ def dfsynthe(output_dir, settings, silent = False):
     file.close()
     cmd('bash {}/kapreadts.com'.format(output_dir))
     notify('Merged all velocities in a single table. Final output saved in kappa.ros', silent)
-    validate_run(output_dir)
+    validate_run(output_dir, silent = silent)
 
 def meta(run_dir):
     """
