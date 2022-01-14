@@ -12,8 +12,7 @@
 #    5: Present day indirect photospheric abundances from Asplund+2009 (2009ARA&A..47..481A), table I (see section 3.6 for details)
 #    6: Present day spectroscopic photospheric abundances from Caffau+2011 (2011SoPh..268..255C), table V (using CO5BOLD 3D model of the solar atmosphere)
 #    7: Present day spectroscopic photospheric abundance of zirconium from Caffau+2011 (2011AN....332..128C)
-#    8: Present day spectroscopic photospheric abundance of neon from Takeda+2010 (2010PASJ...62.1239T)
-#    9: Meteoritic abundance of Li from Asplund+2009 (2009ARA&A..47..481A), table I
+#    8: Present day spectroscopic photospheric abundance of neon from Takeda+2010 (2010PASJ...62.1239T) based on a sample of B-stars
 #
 #
 # Atomic number, Atomic weight, Abundance, Error, Source, Symbol, Name
@@ -24,7 +23,7 @@
 5,10.81,2.79,0.04,4,B,Boron
 6,12.011,8.5,0.06,6,C,Carbon
 7,14.0067,7.86,0.12,6,N,Nitrogen
-8,15.9994,8.76,0.12,6,O,Oxygen
+8,15.9994,8.76,0.07,6,O,Oxygen
 9,18.998403,4.56,0.3,3,F,Fluorine
 10,20.179,8.02,0.09,8,Ne,Neon
 11,22.98977,6.24,0.04,3,Na,Sodium
@@ -32,7 +31,7 @@
 13,26.98154,6.45,0.03,3,Al,Aluminium
 14,28.0855,7.51,0.03,3,Si,Silicon
 15,30.97376,5.46,0.04,6,P,Phosphorus
-16,32.06,7.16,0.05,7,S,Sulfur
+16,32.06,7.16,0.05,6,S,Sulfur
 17,35.453,5.5,0.3,3,Cl,Chlorine
 18,39.948,6.4,0.13,5,Ar,Argon
 19,39.0983,5.11,0.09,6,K,Potassium
@@ -41,7 +40,7 @@
 22,47.9,4.95,0.05,3,Ti,Titanium
 23,50.9415,3.93,0.08,3,V,Vanadium
 24,51.996,5.64,0.04,3,Cr,Chromium
-25,54.938,5.43,0.05,3,Mn,Manganese
+25,54.938,5.43,0.04,3,Mn,Manganese
 26,55.847,7.52,0.06,6,Fe,Iron
 27,58.9332,4.99,0.07,3,Co,Cobalt
 28,58.7,6.22,0.04,3,Ni,Nickel
