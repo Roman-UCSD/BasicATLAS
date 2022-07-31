@@ -1044,96 +1044,85 @@ def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = F
     f.write(templates.atlas_restart.format(structure = ' ' + structure.strip(), teff = teff))
     f.close()
 
-def BC_all_filters(run_dir,f_ref_path,A=0):
+def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/data/filters/', silent = False):
     """
-    Calculate bolometric correction for different filters
+    Carry out synthetic photometry for a given SYNTHE model and return bolometric corrections in various filters
     
     arguments:
         run_dir        :     Output directory of the SYNTHE run of interest
-            
-        f_ref = reference flux (f'_λ) depend on whether it's VEGAMAG or ABMAG 
-        (former is for Hubble and the latter is the standard for JWST)
-            
-        A = Extinction (A_λ) = 0 for now
+        mag_system     :     Desired magnitude system ('VEGAMAG' or 'ABMAG')
+        reddening      :     Optical reddening to the source (E(B-V)). Defaults to no reddening (0.0)
+        filters_dir    :     Directory with filter transmission profiles. Each must be space-separated two-column text file
+                             with wavelengths (in A) in column 1 and transmission fraction (between 0 and 1) in column 2
+        silent         :         Do not print status messages
         
-    Returns:
-        Bolometric Corrections
-        
+    returns:
+        Dictionary of bolometric corrections keyed by filter filename
     """
+    # @TODO
+    #
+    # 1) Add support for reddening
+    # 2) Add support for redshift
+    # 3) Add direct calculation of apparent and absolute magnitudes given luminosity and distance
+    # 4) Add a tutorial notebook for it all
+
+    if reddening != 0.0:
+        raise ValueError('Only unreddened synthetic photometry is currently supported')
+    else:
+        A = 0.0
+
     BC_dict = {}
-    c = atlas.spc.c*10e+10
-    T = atlas.meta(run_dir)['teff']
-    spectrum = atlas.read_spectrum(run_dir) #Setting num_bins=1000 change the result from 40.151 to 40.162
-    
-    if f_ref_path == 'VEGAMAG': #for hubble
-        directory =  '../../BasicATLAS/data/Filters'
-        for filename in os.listdir(directory):
-            f = os.path.join(directory, filename)
-            f_ref_wl,f_ref_flux = np.loadtxt(r"vega_bohlin_2004.dat",unpack=True,delimiter=',')
-            f_ref_interp = np.interp(spectrum['wl'],f_ref_wl,f_ref_flux)
-            filter_x,filter_y = np.loadtxt(f,unpack=True)  
-            filter_interp = np.interp(spectrum['wl'],filter_x,filter_y,left=0,right=0)  
-    
-            if filter_x.max() > spectrum['wl'].max():
-                print(f + ' has exceed the wavelength range of the '+ f_ref_path +'/SYNTHE spectrum.')
-                BC_dict[filename] = float('nan')
-#                continue                
-#                raise ValueError('The SYNTHE Spectrum exceeds the wavelength range of the '+ f_ref_path +' spectrum.')
-            elif filter_x.min() < spectrum['wl'].min():
-                print(f + ' has exceed the wavelength range of the '+ f_ref_path +'/SYNTHE spectrum.')
-                BC_dict[filename] = float('nan')
-#                continue                
-#               raise ValueError('The SYNTHE Spectrum exceeds the wavelength range of the '+ f_ref_path +' spectrum.')
 
-            sort = np.argsort(spectrum['wl'])
-            wl = spectrum['wl'][sort]
-            flux = spectrum['flux'][sort]
-             
-            f1 = wl*flux*filter_interp*10**(-A/2.5)*np.pi
-            a = np.trapz(f1,wl)
-            f2 = wl*f_ref_interp*filter_interp #Equation 6 from paper
-            b = np.trapz(f2,wl)
+    # Equation 5 from Gerasimov+2022. Note that 71.197425 is the IAU constant approximately equaling M_bol_Sun + 2.5 * np.log10(Lsun in Watts)
+    C = 71.197425 - 2.5 * np.log10(4 * np.pi * spc.sigma * (10 * spc.parsec) ** 2.0 * 1000 ** 4.0)
+    c = spc.c * 1e+10
 
-            ratio = a/b #Equation 6 from paper
+    teff = meta(run_dir)['teff']
+    spectrum = read_spectrum(run_dir)
     
-            BC_x = 2.5*np.log10(ratio)-10*np.log10(T/1000)-30.88138 #Equation 4 from paper
-            BC.append(BC_x)
-    
-        return BC
-        
-    elif f_ref_path == 'ABMAG': #for JWST
-        directory =  '../../BasicATLAS/data/Filters'
-        for filename in os.listdir(directory):
-            f = os.path.join(directory, filename)
-            f_ref_interp = (3631*1e-23*c)/(spectrum['wl']**2)   
-        
-            filter_x,filter_y = np.loadtxt(f,unpack=True)  
-            filter_interp = np.interp(spectrum['wl'],filter_x,filter_y,left=0,right=0)  
-    
-            if filter_x.max() > spectrum['wl'].max():
-                print(f + ' has exceed the wavelength range of the '+ f_ref_path +'/SYNTHE spectrum.')
-                BC_dict[filename] = float('nan')
-#                continue
-#                raise ValueError(f + ' exceeds the wavelength range of the '+ f_ref_path +'/SYNTHE spectrum.')
-            elif filter_x.min() < spectrum['wl'].min():
-                print(f + ' has exceed the wavelength range of the '+ f_ref_path +'/SYNTHE spectrum.')
-                BC_dict[filename] = float('nan')
-#                continue
-#                raise ValueError(f + ' exceeds the wavelength range of the '+ f_ref_path +'/SYNTHE spectrum.')
-            
-            sort = np.argsort(spectrum['wl'])
-            wl = spectrum['wl'][sort]
-            flux = spectrum['flux'][sort]
-             
-            f1 = wl*flux*filter_interp*10**(-A/2.5)*np.pi
-            a = np.trapz(f1,wl)
-            f2 = wl*f_ref_interp*filter_interp #Equation 6 from paper
-            b = np.trapz(f2,wl)
+    for filename in os.listdir(filters_dir):
+        filter_wl, filter_t = np.loadtxt(os.path.join(filters_dir, filename), unpack = True)
 
-            ratio = a/b #Equation 6 from paper
-    
-            BC_x = 2.5*np.log10(ratio)-10*np.log10(T/1000)-30.88138 #Equation 4 from paper
-            BC_dict[filename] = BC_x
-            
-        return BC_dict
+        if mag_system == 'VEGAMAG':
+            f_ref_wl, f_ref_flux = np.loadtxt(python_path + '/data/vega_bohlin_2004.dat', unpack = True, delimiter = ',')
+
+            if filter_wl.max() > f_ref_wl.max() or filter_wl.min() < f_ref_wl.min():
+                notify('Filter {} has exceed the wavelength range of the reference Vega spectrum'.format(filename), silent)
+                BC_dict[filename] = np.nan
+                continue
+
+            sort = np.argsort(filter_wl)
+            filter_t_vega = np.interp(f_ref_wl, filter_wl[sort], filter_t[sort], left = 0, right = 0)
+
+        elif mag_system == 'ABMAG':
+            # Equation 7 from Gerasimov+2022
+            f_ref_flux = (3631 * 1e-23 * c) / (spectrum['wl'] ** 2)
+
+        else:
+            raise ValueError('Unknown magnitude system {}'.format(mag_system))
+
+        if filter_wl.max() > spectrum['wl'].max() or filter_wl.min() < spectrum['wl'].min():
+            notify('Filter {} has exceed the wavelength range of the model spectrum'.format(filename), silent)
+            BC_dict[filename] = np.nan
+            continue
+ 
+        sort = np.argsort(filter_wl)
+        filter_t = np.interp(spectrum['wl'], filter_wl[sort], filter_t[sort], left = 0, right = 0)
+
+        # Equation 6 from Gerasimov+2022
+        f1 = spectrum['wl'] * spectrum['flux'] * filter_t * 10 ** (-A / 2.5) * np.pi
+        a = np.trapz(f1, spectrum['wl'])
+        if mag_system == 'VEGAMAG':
+            f2 = f_ref_wl * f_ref_flux * filter_t_vega
+            b = np.trapz(f2, f_ref_wl)
+        elif mag_system == 'ABMAG':
+            f2 = spectrum['wl'] * f_ref_flux * filter_t
+            b = np.trapz(f2, spectrum['wl'])
+        ratio = a / b
+
+        # Equation 4 from Gerasimov+2022
+        BC_dict[filename] = 2.5 * np.log10(ratio) - 10 * np.log10(teff / 1000) + C
+
+    return BC_dict
+
 
