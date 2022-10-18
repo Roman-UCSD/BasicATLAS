@@ -179,7 +179,7 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
         raise ValueError('ODF not calculated for vturb={}. Available vturb: {}'.format(settings.vturb, vturb_available))
 
     # Prepare restart
-    prepare_restart(restart, output_dir + '/restart.dat', teff = settings.teff, logg = settings.logg, zscale = settings.effective_zscale())
+    prepare_restart(restart, output_dir + '/restart.dat', teff = settings.teff, logg = settings.logg, zscale = settings.effective_zscale(), silent = silent)
     
     # Generate a launcher command file
     cards = {
@@ -911,7 +911,8 @@ def read_spectrum(run_dir, num_bins = -1):
 
     return {'wl': wl, 'flux': flux, 'cont': cont, 'line': line}
 
-def load_restarts():
+__load_restarts_cache = {}
+def load_restarts(discard_cache = False):
     """
     Collect effective temperatures, gravities and metallicities of all restart models available to
     the autoselection routine. The paths where such models are stored are listed in restart_paths
@@ -920,7 +921,12 @@ def load_restarts():
     The function recognizes both individual model files (of output_summary.out style) and ATLAS
     run directories. All files/directories that do not comply with either of the two formats are
     disregarded
-    
+
+    For efficiency, the function implements static caching
+
+    arguments:
+        discard_cache        :     Set to True to disable static caching (defaults to False)
+
     returns:
         Dictionary with the following keys:
             restarts          :           List of all found restarts (files or directories)
@@ -928,6 +934,11 @@ def load_restarts():
             logg              :           Corresponding surface gravities [log10(CGS)]
             zscale            :           Corresponding metallicities [M/H] in dex
     """
+    # Try loading the result from cache
+    cache_key = '&'.join(restart_paths)
+    if cache_key in __load_restarts_cache and (not discard_cache):
+        return __load_restarts_cache[cache_key]
+
     # First collect paths to all files in the listed restart directories
     files = []
     for restart_path in set(restart_paths):
@@ -961,7 +972,8 @@ def load_restarts():
         else:
             restarts = restarts[:-1]
 
-    return {'restarts': np.array(restarts), 'teff': np.array(teff), 'logg': np.array(logg), 'zscale': np.array(zscale)}
+    __load_restarts_cache[cache_key] = {'restarts': np.array(restarts), 'teff': np.array(teff), 'logg': np.array(logg), 'zscale': np.array(zscale)}
+    return __load_restarts_cache[cache_key]
 
 def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = False):
     """
@@ -997,7 +1009,7 @@ def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = F
         # Distance formula to be minimized for the best choice of model
         distance = ((teff - restarts['teff']) / (10000 - 3000)) ** 2.0 + ((logg - restarts['logg']) / (6.0 - 0.0)) ** 2.0 + ((zscale - restarts['zscale']) / (4.0 - (-4.0))) ** 2.0
         best_restart = restarts['restarts'][distance == np.min(distance)][0]
-        notify('Automatically chosen restart: {}'.format(best_restart), False)
+        notify('Automatically chosen restart: {}'.format(best_restart), silent)
         # Call ourselves recursively but with "auto" replaced with the chosen model
         return prepare_restart(restart = best_restart, save_to = save_to, teff = teff, logg = logg, zscale = zscale, silent = silent)
 
