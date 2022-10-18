@@ -31,6 +31,16 @@ new_grid = template.format(*wls)
 print(new_grid)
 ```
 Here, the grid is extended by 9 points to $0.1\ \mathrm{nm}$ at the expense of the 9 longest wavelengths in the original grid that are removed to maintain the total number of points.
+
+`ATLAS` stores frequency weights that are used to evaluate the integration coefficients for each frequency bin in the `RCOSET` variable (here `FRESET` are the integration frequencies in Hz):
+
+```fortran
+      DO 2222 NU=2,NUMNU-1
+ 2222 RCOSET(NU)=(FRESET(NU-1)-FRESET(NU+1))/2.
+      RCOSET(1)=(2.997925D17/8.97666-FRESET(2))/2.
+      RCOSET(NUMNU)=FRESET(NUMNU-1)/2.
+```
+Note that the first weight (`RCOSET(1)`) is calculated from the hard-coded shortest wavelength of $8.97666\ \mathrm{nm}$. This wavelength appears to be a residual from some old wavelength grid defined in `SUBROUTINE BLOCKBIG` that is no longer used. I am not sure if this is a mistake in the code. While, in principle, one could change the hard-coded wavelength to the actual shortest wavelength in the grid, the contribution of the corresponding frequency bin is usually not significant. It does however lead to a negative integration coefficient when the grid is extended beyond the hard-coded wavelength, which may cause some confusion.
 ## Extending the ODF temperature range
 The opacity distribution functions (ODFs) are pre-tabulated by `BasicATLAS` at $57$ temperatures from $1995\ \mathrm{K}$ to $199526\ \mathrm{K}$ according to the "new" ODF format by Fiorella Castelli. The full set of temperatures is hard-coded in `BasicATLAS` in the `dfts` variable within `atlas.dfsynthe()`. As with the wavelength grid, ultrahigh or ultralow temperature atmospheres may be exceeding the ODF temperature range, in which case `BasicATLAS` should report the following error:
 
