@@ -1063,7 +1063,9 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
     arguments:
         run_dir        :     Output directory of the SYNTHE run of interest
         mag_system     :     Desired magnitude system ('VEGAMAG' or 'ABMAG')
-        reddening      :     Optical reddening to the source (E(B-V)). Defaults to no reddening (0.0)
+        reddening      :     Optical reddening to the source (E(B-V)). Defaults to no reddening (0.0). Extinction is calculated
+                             for Rv=3.1 using the Fitzpatrick & Massa (2007) extinction law, implemented in the extinction module.
+                             The value may be a single number or a 1D array of reddenings for batch calculations
         filters_dir    :     Directory with filter transmission profiles. Each must be space-separated two-column text file
                              with wavelengths (in A) in column 1 and transmission fraction (between 0 and 1) in column 2
         silent         :         Do not print status messages
@@ -1073,15 +1075,9 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
     """
     # @TODO
     #
-    # 1) Add support for reddening
-    # 2) Add support for redshift
-    # 3) Add direct calculation of apparent and absolute magnitudes given luminosity and distance
-    # 4) Add a tutorial notebook for it all
-
-    if reddening != 0.0:
-        raise ValueError('Only unreddened synthetic photometry is currently supported')
-    else:
-        A = 0.0
+    # 1) Add support for redshift
+    # 2) Add direct calculation of apparent and absolute magnitudes given luminosity and distance
+    # 3) Add a tutorial notebook for it all
 
     BC_dict = {}
 
@@ -1121,19 +1117,57 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
         sort = np.argsort(filter_wl)
         filter_t = np.interp(spectrum['wl'], filter_wl[sort], filter_t[sort], left = 0, right = 0)
 
-        # Equation 6 from Gerasimov+2022
-        f1 = spectrum['wl'] * spectrum['flux'] * filter_t * 10 ** (-A / 2.5) * np.pi
-        a = np.trapz(f1, spectrum['wl'])
-        if mag_system == 'VEGAMAG':
-            f2 = f_ref_wl * f_ref_flux * filter_t_vega
-            b = np.trapz(f2, f_ref_wl)
-        elif mag_system == 'ABMAG':
-            f2 = spectrum['wl'] * f_ref_flux * filter_t
-            b = np.trapz(f2, spectrum['wl'])
-        ratio = a / b
+        # Vectorization for reddening
+        if len(BC_dict) == 0:
+            reddening_is_array = True
+        try:
+            reddening[0]
+        except:
+            reddening_is_array = False
+            reddening = [reddening]
+        for E in reddening:
 
-        # Equation 4 from Gerasimov+2022
-        BC_dict[filename] = 2.5 * np.log10(ratio) - 10 * np.log10(teff / 1000) + C
+            # Calculate interstellar extinction
+            if E != 0.0:
+                try:
+                    import extinction
+                except:
+                    raise ValueError('Could not import the extinction module. For extinguished photometry, make sure the module is installed ( https://github.com/kbarbary/extinction ).')
+                Rv = 3.1 # Rv must be 3.1 for the FM07 law
+                extinction_law = lambda wl: extinction.fm07(np.array(wl), E * Rv)
+                A = extinction_law(spectrum['wl'])
+            else:
+                A = 0.0
+
+            # Equation 6 from Gerasimov+2022
+            f1 = spectrum['wl'] * spectrum['flux'] * filter_t * 10 ** (-A / 2.5) * np.pi
+            a = np.trapz(f1, spectrum['wl'])
+            if mag_system == 'VEGAMAG':
+                f2 = f_ref_wl * f_ref_flux * filter_t_vega
+                b = np.trapz(f2, f_ref_wl)
+            elif mag_system == 'ABMAG':
+                f2 = spectrum['wl'] * f_ref_flux * filter_t
+                b = np.trapz(f2, spectrum['wl'])
+            ratio = a / b
+
+            if filename not in BC_dict:
+                BC_dict[filename] = np.array([])
+
+            # Equation 4 from Gerasimov+2022
+            BC_dict[filename] = np.append(BC_dict[filename], 2.5 * np.log10(ratio) - 10 * np.log10(teff / 1000) + C)
+
+    # Match the shape of the output to the shape of "reddening"
+    for filename in BC_dict:
+        if reddening_is_array:
+            try:
+                BC_dict[filename][0]
+            except:
+                BC_dict[filename] = np.full([len(reddening)], BC_dict[filename])
+        else:
+            try:
+                BC_dict[filename] = BC_dict[filename][0]
+            except:
+                pass
 
     return BC_dict
 
