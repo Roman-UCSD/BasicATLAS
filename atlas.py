@@ -1056,7 +1056,7 @@ def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = F
     f.write(templates.atlas_restart.format(structure = ' ' + structure.strip(), teff = teff))
     f.close()
 
-def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/data/filters/', silent = False):
+def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/data/filters/', spectrum = False, silent = False):
     """
     Carry out synthetic photometry for a given SYNTHE model and return bolometric corrections in various filters
     
@@ -1068,7 +1068,10 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
                              The value may be a single number or a 1D array of reddenings for batch calculations
         filters_dir    :     Directory with filter transmission profiles. Each must be space-separated two-column text file
                              with wavelengths (in A) in column 1 and transmission fraction (between 0 and 1) in column 2
-        silent         :         Do not print status messages
+        spectrum       :     As an alternative to providing the SYNTHE output directory in "run_dir", the spectrum and effective
+                             temperature may be provided in this parameter directly. Must be a dictionary with three keys: "teff"
+                             [in K], "wl" [in A] and "flux" [in erg s^-1 cm^-2 A^-1 strad^-1]
+        silent         :     Do not print status messages
         
     returns:
         Dictionary of bolometric corrections keyed by filter filename
@@ -1085,8 +1088,11 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
     C = 71.197425 - 2.5 * np.log10(4 * np.pi * spc.sigma * (10 * spc.parsec) ** 2.0 * 1000 ** 4.0)
     c = spc.c * 1e+10
 
-    teff = meta(run_dir)['teff']
-    spectrum = read_spectrum(run_dir)
+    if type(spectrum) != bool:
+        teff = spectrum['teff']
+    else:
+        teff = meta(run_dir)['teff']
+        spectrum = read_spectrum(run_dir)
     
     for filename in os.listdir(filters_dir):
         filter_wl, filter_t = np.loadtxt(os.path.join(filters_dir, filename), unpack = True)
