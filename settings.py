@@ -36,7 +36,7 @@ class Settings:
             elif solar[symbol[Z == i][0]] < -90.0 and elements[i] > -20.0:
                 raise ValueError('No solar abundance for element {}'.format(symbol[Z == i][0]))
             else:
-                atlas_abun = np.round(elements[i] + np.log10((elements[1] + elements[2])) - np.log10(elements[1]) + 12.0 - solar[symbol[Z == i][0]], 2)
+                atlas_abun = np.round(elements[i] - np.log10(elements[1]) + 12.0 - solar[symbol[Z == i][0]], 2)
             if atlas_abun != 0.0:
                 abun[symbol[Z == i][0]] = atlas_abun
             total_mass += 10 ** (atlas_abun + solar[symbol[Z == i][0]] + zscale) * A[Z == i][0]
@@ -52,10 +52,11 @@ class Settings:
         """
         Convert standard chemical abundances to the ATLAS format. Standard abundances are specified in terms
         of the helium mass fraction (Y), metallicity ([M/H]) and enhancements of individual elements ([A/M]),
-        where [x/y] = log10(N(x) / N(y)) - log10(N(x)_solar / N(y)_solar). ATLAS abundances of hydrogen and
-        helium are provided explicitly as number fractions, while all metal abundances are provided as
-        log10(N(A)) - log10(N(H) + N(He)). ATLAS hydrogen and helium abundances are provided absolutely,
-        while ATLAS metal abundances are given before the metallicity enhancement.
+        where [x/y] = log10(N(x) / N(y)) - log10(N(x)_solar / N(y)_solar). ATLAS abundances are provided as
+        fractions of the total nuclear number density. Hydrogen and helium abundances are listed as they are
+        (fractions between 0.0 and 1.0), while metal abundances are listed as base-10 logarithms without accounting
+        for the overall metallicity. Metallicity in ATLAS (ABUNDANCE SCALE) is listed as a linear multiplier (e.g.
+        0.01 corresponds to [M/H]=-2)
 
         While carrying out the conversion, the method uses abun_solar() to retrieve standard solar abundances
 
@@ -103,9 +104,9 @@ class Settings:
         # Hydrogen and helium abundances are simply number fractions
         elements[1] = N_array[Z_array == 1][0] / np.sum(N_array)
         elements[2] = N_array[Z_array == 2][0] / np.sum(N_array)
-        # The rest are log10(N(A) / (N(H) + N(He))) *before* the metallicity enhancement
+        # The rest are given as log10 *before* the metallicity enhancement
         for i in range(3, 100):
-            elements[i] = np.log10(N_array[Z_array == i][0] / (N_array[Z_array == 1][0] + N_array[Z_array == 2][0])) - zscale
+            elements[i] = np.log10(N_array[Z_array == i][0] / np.sum(N_array)) - zscale
             # ATLAS behaves weirdly when abundances are given below -20.0. At -20.0 the element effectively does not exist
             if elements[i] < -20.0:
                 elements[i] = -20.0
@@ -183,9 +184,9 @@ class Settings:
         metal_mass = 0.0
         for i, element in enumerate(elements):
             if i > 2:
-                metal_mass += 10 ** (element + self.zscale) * (1e12 + 1e12 * (elements[2] / elements[1])) * A[Z == i][0]
-        hydrogen_mass = 1e12 * A[Z == 1][0]
-        helium_mass = 1e12 * (elements[2] / elements[1]) * A[Z == 2][0]
+                metal_mass += 10 ** (element + self.zscale) * A[Z == i][0]
+        hydrogen_mass = elements[1] * A[Z == 1][0]
+        helium_mass = elements[2] * A[Z == 2][0]
         total_mass = metal_mass + hydrogen_mass + helium_mass
         return hydrogen_mass / total_mass, helium_mass / total_mass, metal_mass / total_mass
 
