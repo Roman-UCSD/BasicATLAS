@@ -17,6 +17,14 @@ Also see the websites of [Robert L Kurucz](http://kurucz.harvard.edu/programs.ht
 
 If you are using **BasicATLAS** in your research, please cite [Larkin et al. (2022)](https://arxiv.org/abs/2210.09185)
 
+## Contributors
+
+* Roman Gerasimov (University of California San Diego)
+* Mikaela Larkin (University of California San Diego)
+* Tianxing Zhou (University of California San Diego)
+* Philipp Edelmann (Los Alamos National Laboratory) @ [AAS 242](https://aas.org/meetings/aas242) Hack Together
+* Paul Barrett (George Washington University) @ [AAS 242](https://aas.org/meetings/aas242) Hack Together
+
 ## Installation
 
 This repository does not contain the source code of **ATLAS** or any of the required data files (e.g. line lists). Both must be downloaded from the websites listed above. A download script is provided using `wget` that works at the time of writing (10/21/2022). A test script is provided to ensure that all the necessary files are present and have correct MD5 checksums.

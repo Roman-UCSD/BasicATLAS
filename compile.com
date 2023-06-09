@@ -68,6 +68,29 @@ EOF
 # Compile patched ATLAS-9
 gfortran -o bin/atlas9mem.exe src/atlas9mem.patched.for -finit-local-zero -fno-automatic -w -std=legacy
 
+# Patch SYNTHE to indicate calculation progress
+patch -o src/synthe.patched.for src/synthe.for << EOF
+@@ -213,7 +213,10 @@
+       NLINES=NLINES+N19
+       IREC=0
+ C
++      OPEN(UNIT=242, FILE='progress.dat')
+       DO 500 J=1,NRHOX
++      WRITE(242,*) J, '/', NRHOX
++      FLUSH(242)
+       REWIND 12
+ C     INITIALIZE BUFFER
+       DO 210 NBUFF=1,LENGTH
+@@ -371,6 +374,7 @@
+       MLINEJ(J)=MLINES
+       ILINES=ILINES+MLINES
+   500 CONTINUE
++      CLOSE(242)
+       WRITE(6,106)ILINES
+   106 FORMAT(I10)
+ C
+EOF
+
 # Compile SYNTHE
 gfortran -fno-automatic -w -O3 -c src/xnfpelsyn.for -std=legacy
 gfortran -fno-automatic -w -O3 -c src/atlas7v.for -std=legacy
@@ -78,7 +101,7 @@ gfortran -fno-automatic -w -O3 -o bin/rpredict.exe src/rpredict.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rmolecasc.exe src/rmolecasc.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rschwenk.exe src/rschwenk.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rh2ofast.exe src/rh2ofast.for -std=legacy
-gfortran -fno-automatic -w -O3 -o bin/synthe.exe src/synthe.for -std=legacy
+gfortran -fno-automatic -w -O3 -o bin/synthe.exe src/synthe.patched.for -std=legacy
 gfortran -fno-automatic -w -O3 -c src/spectrv.for -std=legacy
 gfortran spectrv.o atlas7v.o -o bin/spectrv.exe -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/converfsynnmtoa.exe src/converfsynnmtoa.for -std=legacy

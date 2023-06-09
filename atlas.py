@@ -11,6 +11,8 @@ import scipy.constants as spc
 from settings import Settings
 import templates
 
+from threading import Thread
+
 # Path to the home directory of the library
 python_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -347,7 +349,7 @@ def synbeg(min_wl, max_wl, res):
         wllast = np.e ** (ixwlend * ratiolg)
     return int(ixwlend - ixwlbeg + 1)
 
-def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2010001, overwrite_prev = False, silent = False):
+def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2010001, overwrite_prev = False, silent = False, progress = True):
     """
     Run SYNTHE to calculate the emergent spectrum corresponding to an existing ATLAS model
 
@@ -365,6 +367,9 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2
         overwrite_prev :     If True, will remove any output of previous SYNTHE runs in the run directory before startup.
                              If False (default), an error is thrown when a previous SYNTHE run is discovered
         silent         :     Do not print status messages
+        progress       :     If True (default), show progress of the run. Progress is inferred from the progress.dat file,
+                             created by patched synthe.for at the beginning of processing each atmospheric layer. The feature
+                             requires the tqdm module
     """
     startTime = datetime.now()
 
@@ -436,7 +441,26 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2
         notify("Launcher created for wavelength range ({}, {}), batch {}. Expected number of points: {} (buffer {})".format(current_min_wl, current_max_wl, synthe_num, synbeg(current_min_wl, current_max_wl, res), buffsize), silent)
 
         # Run SYNTHE
-        cmd('bash {}/synthe_launch.com'.format(output_dir))
+        args = ['bash {}/synthe_launch.com'.format(output_dir)]
+        if not progress:
+            cmd(*args)
+        else:
+            thread = Thread(target = cmd, args = args)
+            thread.start()
+            import tqdm
+            pbar = tqdm.tqdm(total = 100)
+            while thread.is_alive():
+                time.sleep(2)
+                if not os.path.isfile(progress_fn := output_dir + '/synthe_{}/progress.dat'.format(synthe_num)):
+                    progress = 0
+                else:
+                    f = open(progress_fn, 'r')
+                    progress = f.read().strip().split('\n')[-1].split('/')
+                    progress = (int(progress[0].strip()) - 1) / int(progress[1].strip())
+                    f.close()
+                pbar.update(np.round(progress * 100) - pbar.n)
+            pbar.update(100)
+            pbar.close()
         if not (os.path.isfile(output_dir + '/synthe_{}/spectrum.asc'.format(cards['synthe_num']))):
             raise ValueError("SYNTHE did not output expected files")
         notify("SYNTHE halted", silent)
