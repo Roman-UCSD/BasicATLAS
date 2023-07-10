@@ -106,3 +106,16 @@ brew install wget
 ```
 
 The download and compilation scripts should then be able to run as shown above.
+
+## Windows OS Installation
+
+To install BasicATLAS on Windows, it is recommended that you install and work in the [Windows Ubuntu app](https://apps.microsoft.com/store/detail/ubuntu/9PDXGNCFSCZV). After installing, you will need to install the Intel Fortran compiler (ifort) specifically for Ubuntu. To do this, you can refer to the provided [steps](https://gist.github.com/SomajitDey/aeb6eb4c8083185e06800e1ece4be1bd) for guidance on installing ifort on Ubuntu. In case the link does not work, here are the following instructions:
+
+1. `curl -Lo- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo gpg --dearmor -o /usr/share/keyrings/oneapi-archive-keyring.gpg`
+2. `sudo tee /etc/apt/sources.list.d/oneAPI.list <<< "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main"`
+3. `sudo apt update`
+4. `sudo apt install intel-oneapi-compiler-fortran`
+5. Optional: `sudo apt install intel-oneapi-mkl`
+6. In `~/.bashrc`: `source /opt/intel/oneapi/setvars.sh > /dev/null`
+
+Once you have successfully completed these installation steps for ifort, you can start with the cloning repository of the installation section and continue with the rest of the steps.
