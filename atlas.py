@@ -349,7 +349,7 @@ def synbeg(min_wl, max_wl, res):
         wllast = np.e ** (ixwlend * ratiolg)
     return int(ixwlend - ixwlbeg + 1)
 
-def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2010001, overwrite_prev = False, silent = False, progress = True):
+def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, buffsize = 2010001, overwrite_prev = False, air_wl = False, silent = False, progress = True):
     """
     Run SYNTHE to calculate the emergent spectrum corresponding to an existing ATLAS model
 
@@ -358,7 +358,8 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2
         min_wl         :     Minimum wavelength of the calculation (nm)
         max_wl         :     Maximum wavelength of the calculation (nm)
         res            :     Sampling resolution (lambda / delta_lambda)
-        vturb          :     Turbulent velocity [km/s]
+        vturb          :     Turbulent velocity [km/s] (defaults to 1.5 km/s as per the average value measured by APOGEE
+                             (III/284/allstars)). Note that ATLAS and DFSYNTHE have their own vturb values
         buffsize       :     Maximum allowed number of wavelength points per calculation. If the required number of points
                              exceeds this value, the calculation will be split into multiple batches. This argument is
                              introduced as SYNTHE allocates a buffer of finite size and cannot handle more wavelength
@@ -366,6 +367,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2
                              synthe.for
         overwrite_prev :     If True, will remove any output of previous SYNTHE runs in the run directory before startup.
                              If False (default), an error is thrown when a previous SYNTHE run is discovered
+        air_wl         :     If True, save output in AIR wavelengths. If False (default), use VACUUM wavelengths
         silent         :     Do not print status messages
         progress       :     If True (default), show progress of the run. Progress is inferred from the progress.dat file,
                              created by patched synthe.for at the beginning of processing each atmospheric layer. The feature
@@ -421,7 +423,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 0.0, buffsize = 2
           's_files': python_path + '/data/synthe_files/',
           'd_files': python_path + '/data/dfsynthe_files/',
           'synthe_suite': python_path + '/bin/',
-          'airorvac': 'AIR',
+          'airorvac': ['VAC', 'AIR'][air_wl],
           'wlbeg': float(current_min_wl),
           'wlend': float(current_max_wl),
           'resolu': float(res),
