@@ -24,8 +24,11 @@ If you are using **BasicATLAS** in your research, please cite [Larkin et al. (20
 * Tianxing Zhou (University of California San Diego)
 * Philipp Edelmann (Los Alamos National Laboratory) @ [AAS 242](https://aas.org/meetings/aas242) Hack Together
 * Paul Barrett (George Washington University) @ [AAS 242](https://aas.org/meetings/aas242) Hack Together
+* Efrain Alvarado (University of California San Diego)
 
 ## Installation
+
+(see OS-specific notes below)
 
 This repository does not contain the source code of **ATLAS** or any of the required data files (e.g. line lists). Both must be downloaded from the websites listed above. A download script is provided using `wget` that works at the time of writing (10/21/2022). A test script is provided to ensure that all the necessary files are present and have correct MD5 checksums.
 
@@ -43,8 +46,6 @@ This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
 
-Intel compilers are currently available as a part of the [oneAPI HPC Toolkit](https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html) for all major operating systems (I have even been fully successful running **ATLAS-9** on Windows).
-
 In the directory of the repository, first run the download script to fetch all data files and missing source code:
 
 ```bash
@@ -57,7 +58,7 @@ The download involves multiple gigabytes of data and may take a few minutes. Ple
 source compile.com
 ```
 
-The script will also carry out a few necessary rearrangements ("[repacking](https://wwwuser.oats.inaf.it/castelli/sources/dfsynthe.html)") of line lists.
+The script will also carry out a few necessary rearrangements ("[repacking](https://wwwuser.oats.inaf.it/castelli/sources/dfsynthe.html)") of line lists and some source code patching.
 
 Finally, run the test script to make sure the installation was successful:
 
@@ -85,31 +86,19 @@ After following the installation steps, the toolkits will need to be initialized
 . /opt/intel/oneapi/setvars.sh
 ```
 
-Homebrew will then need to be installed in order to use GNU Fortran:
+Homebrew can be used to install GNU Fortran and wget:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-The terminal will then prompt you to input your password before beginning the download. 
-
-Once Homebrew has finished downloading, install GNU Fortran using:
-
-```bash
 brew install gcc
-```
-
-Before continuing on to downloading scripts, `wget` will also need to be installed with Homebrew:
-
-```bash
 brew install wget
 ```
 
-The download and compilation scripts should then be able to run as shown above.
+Proceed with regular download and compilation from here.
 
-## Windows OS Installation
+## Windows Installation
 
-To install BasicATLAS on Windows, it is recommended that you install and work in the [Windows Ubuntu app](https://apps.microsoft.com/store/detail/ubuntu/9PDXGNCFSCZV). After installing, you will need to install the Intel Fortran compiler (ifort) specifically for Ubuntu. To do this, you can refer to the provided [steps](https://gist.github.com/SomajitDey/aeb6eb4c8083185e06800e1ece4be1bd) for guidance on installing ifort on Ubuntu. In case the link does not work, here are the following instructions:
+While all programs can be compiled natively on Windows, it is recommended to use the Ubuntu environment instead, available at the [Microsoft Store](https://apps.microsoft.com/store/detail/ubuntu/9PDXGNCFSCZV). To install Intel compilers in your Ubuntu environment (courtesy of [Somajit](https://gist.github.com/SomajitDey/aeb6eb4c8083185e06800e1ece4be1bd)):
 
 1. `curl -Lo- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo gpg --dearmor -o /usr/share/keyrings/oneapi-archive-keyring.gpg`
 2. `sudo tee /etc/apt/sources.list.d/oneAPI.list <<< "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main"`
@@ -118,4 +107,4 @@ To install BasicATLAS on Windows, it is recommended that you install and work in
 5. Optional: `sudo apt install intel-oneapi-mkl`
 6. In `~/.bashrc`: `source /opt/intel/oneapi/setvars.sh > /dev/null`
 
-Once you have successfully completed these installation steps for ifort, you can start with the cloning repository of the installation section and continue with the rest of the steps.
+Proceed with regular download and compilation from here.
