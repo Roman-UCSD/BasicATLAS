@@ -392,16 +392,26 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, buffsize = 2
             notify("Removed the output of a previous SYNTHE run", silent)
 
     # Prepare a SYNTHE friendly file
-    if not (os.path.isfile(output_dir + '/output_synthe.out')):
-        file = open(output_dir + '/output_summary.out', 'r')
-        model = file.read()
-        file.close()
-        file = open(output_dir + '/output_synthe.out', 'w')
-        file.write(templates.synthe_prependix + model)
-        file.close()
-        notify("Adapted the ATLAS-9 model to SYNTHE in output_synthe.out", silent)
-    else:
-        notify("The ATLAS-9 model has already been adapted to SYNTHE", silent)
+    file = open(output_dir + '/output_summary.out', 'r')
+    model = file.read()
+    file.close()
+    # Remove ATLAS turbulent velocity from the output
+    model = model.split('\n')
+    in_output = False
+    for i, line in enumerate(model):
+        if line.find('FLXRAD,VCONV,VELSND') != -1:
+            in_output = True
+            continue
+        if line.find('PRADK') != -1:
+            in_output = False
+            continue
+        if in_output:
+            model[i] = line[:-40] + ' {:9.3E}'.format(0) + line[-30:]
+    model = '\n'.join(model)
+    file = open(output_dir + '/output_synthe.out', 'w')
+    file.write(templates.synthe_prependix + model)
+    file.close()
+    notify("Adapted the ATLAS-9 model to SYNTHE in output_synthe.out", silent)
 
     synthe_num = 0            # Batch number
     completed = False         # The last batch sets this flag to True
@@ -644,7 +654,8 @@ def meta_atlas(run_dir):
             vturb        :       Turbulent velocity [km/s]
             type         :       Set to "ATLAS" for a pure ATLAS-9 run or "SYNTHE" for an ATLAS/SYNTHE run
             res          :       If synthe == True, resolution of the spectrum (lambda/delta_lambda)
-            synthe_vturb :       Turbulent velocity in SYNTHE [km/s]
+            synthe_vturb :       Turbulent velocity in SYNTHE [km/s]. Returns False if the velocity varies
+                                 across layers
     """
     elements_received, params_received = parse_atlas_abundances(run_dir + '/output_main.out', classic_style = False, lookbehind = 2, params = ['0XSCALE', 'TEFF', 'LOG G'])
     output = Settings().abun_atlas_to_std(elements_received, np.log10(params_received['0XSCALE']))
@@ -658,7 +669,19 @@ def meta_atlas(run_dir):
         output['type'] = 'SYNTHE'
         synthe_params = validate_run(run_dir, return_received_synthe = True)
         output['res'] = synthe_params['resolu']
-        output['synthe_vturb'] = synthe_params['turbv']
+        synthe_vturb = synthe_params['turbv']   # SYNTHE turbulent velocity parameter
+        # By default, SYNTHE adds its own VTURB to ATLAS output in quadrature. synthe() should suppress that behavior by resetting the ATLAS
+        # turbulent velocities to 0 when adapting the ATLAS model for the SYNTHE run; however, if that does not happen, we must do that
+        # quadrature addition here
+        f = open(run_dir + '/output_synthe.out', 'r')
+        content = f.read()
+        content = content[content.find('\n', content.find('FLXRAD,VCONV,VELSND')) + 1 : content.rfind('\n', 0, content.find('PRADK'))].strip()
+        atlas_vturb = np.array(list(map(lambda x: float(x[-40:-30].strip()), content.split('\n')))) * 1e-5
+        f.close()
+        if np.alltrue(atlas_vturb[0] == atlas_vturb):
+            output['synthe_vturb'] = np.sqrt(atlas_vturb[0] ** 2.0 + synthe_vturb ** 2.0)
+        else:
+            output['synthe_vturb'] = False
 
     return output
 
@@ -923,13 +946,14 @@ def read_spectrum(run_dir, num_bins = -1):
     """
     if not os.path.isdir(run_dir):
         raise ValueError('Run directory {} not found!'.format(run_dir))
-    if not os.path.isfile(run_dir + '/spectrum.dat'):
-        raise ValueError('Run directory {} does not contain SYNTHE output!'.format(run_dir))
+    if not os.path.isfile(spec_filename := (run_dir + '/spectrum.dat')):
+        if not os.path.isfile(spec_filename := (run_dir + '/spectrum.dat.gz')):
+            raise ValueError('Run directory {} does not contain SYNTHE output!'.format(run_dir))
 
     structure = {}
     units = {}
 
-    wl, flux, cont, line = np.loadtxt(run_dir + '/spectrum.dat', delimiter = ',', unpack = True)
+    wl, flux, cont, line = np.loadtxt(spec_filename, delimiter = ',', unpack = True)
     if num_bins > 0:
         wl_binned, flux = bin_spec(wl, flux, num_bins = num_bins)
         wl_binned, cont = bin_spec(wl, cont, num_bins = num_bins)
