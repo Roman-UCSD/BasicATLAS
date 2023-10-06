@@ -653,9 +653,10 @@ def meta_atlas(run_dir):
             logg         :       Surface gravity [log10(CGS)]
             vturb        :       Turbulent velocity [km/s]
             type         :       Set to "ATLAS" for a pure ATLAS-9 run or "SYNTHE" for an ATLAS/SYNTHE run
-            res          :       If synthe == True, resolution of the spectrum (lambda/delta_lambda)
+            res          :       Resolution of the spectrum (lambda/delta_lambda)
             synthe_vturb :       Turbulent velocity in SYNTHE [km/s]. Returns False if the velocity varies
                                  across layers
+            medium       :       Whether the output wavelengths are quoted in vacuum or air
     """
     elements_received, params_received = parse_atlas_abundances(run_dir + '/output_main.out', classic_style = False, lookbehind = 2, params = ['0XSCALE', 'TEFF', 'LOG G'])
     output = Settings().abun_atlas_to_std(elements_received, np.log10(params_received['0XSCALE']))
@@ -682,6 +683,16 @@ def meta_atlas(run_dir):
             output['synthe_vturb'] = np.sqrt(atlas_vturb[0] ** 2.0 + synthe_vturb ** 2.0)
         else:
             output['synthe_vturb'] = False
+        # Figure out if the wavelengths are vacuum or air
+        f = open(run_dir + '/synthe_launch.com')
+        content = f.read()
+        f.close()
+        if content.find('\nAIR ') != -1:
+            output['medium'] = 'air'
+        elif content.find('\nVAC ') != -1:
+            output['medium'] = 'vacuum'
+        else:
+            output['medium'] = 'unknown'
 
     return output
 
