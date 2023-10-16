@@ -139,18 +139,8 @@ class Settings:
         Check that a given ODF is compatible with the current settings. "ODF" must be the output of meta(). The function
         runs silently with no returned value if the ODF is compatible, but throws an exception otherwise
         """
-        # Calculate solar Y
-        Z, A = np.loadtxt(python_path + '/data/solar.csv', usecols = [0, 1], unpack = True, delimiter = ',')
-        symbol = np.loadtxt(python_path + '/data/solar.csv', usecols = [5], unpack = True, delimiter = ',', dtype = str)
         solar = self.abun_solar()
-        total_mass = 0.0
-        for element in solar:
-            total_mass += 10 ** (solar[element] + self.zscale * (Z[symbol == element][0] > 2.0)) * A[symbol == element][0]
-        Y_solar = 10 ** solar['He'] * A[symbol == 'He'][0] / total_mass
-        if self.Y < 0.0 or self.Y > 1.0:
-            Y = Y_solar
-        else:
-            Y = self.Y
+        Y = self.mass_fractions()[1]
 
         if np.abs(ODF['zscale'] - self.zscale) > 0.01:
             raise ValueError('Incomplatible ODF: ODF calculated for zscale={} as opposed to {}'.format(ODF['zscale'], self.zscale))
