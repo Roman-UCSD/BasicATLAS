@@ -78,7 +78,7 @@ EOF
 
 kappa9_control = """
 cd {output_dir}
-mv {d_data}/molecules.dat fort.2
+cp {d_data}/molecules.dat fort.2
 mv ./p00big{v}.bdf fort.9
 {dfsynthe_suite}/kappa9.exe<<EOF>kapm40k2.out
 MOLECULES ON
@@ -185,7 +185,6 @@ VTURB {v}.0E5
 BEGIN                    ITERATION  15 COMPLETED
 END
 EOF
-mv fort.2 {d_data}/molecules.dat
 mv fort.9 ./p00big{v}.bdf
 mv fort.7 kapk{v}.dat
 """
