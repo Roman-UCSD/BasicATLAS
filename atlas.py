@@ -798,7 +798,7 @@ def validate_run(run_dir, return_received_vturb = False, return_received_synthe 
         end = start
         for i in range(2):
             end += content[end:].find('\n') + 1
-        vturb_received = float(np.loadtxt([content[start:end].strip()], dtype = str)[7])
+        vturb_received = float(np.loadtxt([content[start:end].strip().replace('E-', 'E=').replace('-', ' -').replace('E=', 'E-')], dtype = str)[7])
         if return_received_vturb:
             return vturb_received
 
