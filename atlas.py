@@ -1127,7 +1127,8 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
         reddening      :     Optical reddening to the source (E(B-V)). Defaults to no reddening (0.0). Extinction is calculated
                              for Rv=3.1 using the Fitzpatrick & Massa (2007) extinction law, implemented in the extinction module.
                              The value may be a single number or a 1D array of reddenings for batch calculations
-        filters_dir    :     Directory with filter transmission profiles. Each must be space-separated two-column text file
+        filters_dir    :     Directory with filter transmission profiles. Alternatively, list of filenames of individual filters to
+                             include in the calculation. Each transmission profile file must be a space-separated two-column text file
                              with wavelengths (in A) in column 1 and transmission fraction (between 0 and 1) in column 2
         spectrum       :     As an alternative to providing the SYNTHE output directory in "run_dir", the spectrum and effective
                              temperature may be provided in this parameter directly. Must be a dictionary with three keys: "teff"
@@ -1154,9 +1155,17 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
     else:
         teff = meta(run_dir)['teff']
         spectrum = read_spectrum(run_dir)
-    
-    for filename in os.listdir(filters_dir):
-        filter_wl, filter_t = np.loadtxt(os.path.join(filters_dir, filename), unpack = True)
+
+    if type(filters_dir) is str:
+        filters = list(map(lambda fn: os.path.join(filters_dir, fn), os.listdir(filters_dir)))
+    else:
+        filters = filters_dir
+
+    for filename in filters:
+        filter_wl, filter_t = np.loadtxt(filename, unpack = True)
+
+        if type(filters_dir) is str:
+            filename = os.path.basename(filename)
 
         if mag_system == 'VEGAMAG':
             f_ref_wl, f_ref_flux = np.loadtxt(python_path + '/data/vega_bohlin_2004.dat', unpack = True, delimiter = ',')
