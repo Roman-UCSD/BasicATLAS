@@ -439,7 +439,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, buffsize = 2
           'resolu': float(res),
           'turbv': float(vturb),
           'ifnlte': 0,
-          'linout': 30,
+          'linout': -1,
           'cutoff': 0.0001,
           'ifpred': 1,
           'nread': 0,
