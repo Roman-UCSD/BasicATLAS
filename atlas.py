@@ -1117,7 +1117,7 @@ def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = F
     f.write(templates.atlas_restart.format(structure = ' ' + structure.strip(), teff = teff))
     f.close()
 
-def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/data/filters/', spectrum = False, silent = False):
+def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/data/filters/', spectrum = False, max_spill = 1e-5, silent = False):
     """
     Carry out synthetic photometry for a given SYNTHE model and return bolometric corrections in various filters
     
@@ -1133,6 +1133,10 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
         spectrum       :     As an alternative to providing the SYNTHE output directory in "run_dir", the spectrum and effective
                              temperature may be provided in this parameter directly. Must be a dictionary with three keys: "teff"
                              [in K], "wl" [in A] and "flux" [in erg s^-1 cm^-2 A^-1 strad^-1]
+        max_spill      :     If the band extends beyond the wavelength range of the provided spectrum, this parameter determines the
+                             maximum fraction of the band throughput that is allowed to be outside said wavelength range. If the
+                             actual spill fraction exceeds this value, the resulting bolometric correction is set to nan. Otherwise,
+                             the spilled transmission is ignored
         silent         :     Do not print status messages
         
     returns:
@@ -1186,9 +1190,14 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
             raise ValueError('Unknown magnitude system {}'.format(mag_system))
 
         if filter_wl.max() > spectrum['wl'].max() or filter_wl.min() < spectrum['wl'].min():
-            notify('Filter {} has exceed the wavelength range of the model spectrum'.format(filename), silent)
-            BC_dict[filename] = np.nan
-            continue
+            # Evaluate the fraction of throughput beyond the wavelength range of the model
+            inside = (filter_wl >= spectrum['wl'].min()) & (filter_wl <= spectrum['wl'].max())
+            norm = np.trapz(filter_t, filter_wl)
+            spill = (norm - np.trapz(filter_t[inside], filter_wl[inside])) / norm
+            if spill > max_spill:
+                notify('Filter {} has exceed the wavelength range of the model spectrum'.format(filename), silent)
+                BC_dict[filename] = np.nan
+                continue
  
         sort = np.argsort(filter_wl)
         filter_t = np.interp(spectrum['wl'], filter_wl[sort], filter_t[sort], left = 0, right = 0)
