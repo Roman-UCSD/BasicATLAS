@@ -13,6 +13,22 @@ import templates
 
 from threading import Thread
 
+# Custom Thread() class that returns information on exceptions raised by the thread to the main program
+class ExceptionHandlingThread(Thread):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._exception = None
+
+    def run(self):
+        try:
+            super().run()
+        except Exception as e:
+            self._exception = e
+
+    @property
+    def exception(self):
+        return self._exception
+
 # Path to the home directory of the library
 python_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -457,7 +473,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, buffsize = 2
         if not progress:
             cmd(*args)
         else:
-            thread = Thread(target = cmd, args = args)
+            thread = ExceptionHandlingThread(target = cmd, args = args)
             thread.start()
             import tqdm
             pbar = tqdm.tqdm(total = 100)
@@ -473,6 +489,8 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, buffsize = 2
                 pbar.update(np.round(progress * 100) - pbar.n)
             pbar.update(100)
             pbar.close()
+        if thread.exception is not None:
+            raise thread.exception
         if not (os.path.isfile(output_dir + '/synthe_{}/spectrum.asc'.format(cards['synthe_num']))):
             raise ValueError("SYNTHE did not output expected files")
         notify("SYNTHE halted", silent)
