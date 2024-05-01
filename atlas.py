@@ -489,8 +489,8 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, buffsize = 2
                 pbar.update(np.round(progress * 100) - pbar.n)
             pbar.update(100)
             pbar.close()
-        if thread.exception is not None:
-            raise thread.exception
+            if thread.exception is not None:
+                raise thread.exception
         if not (os.path.isfile(output_dir + '/synthe_{}/spectrum.asc'.format(cards['synthe_num']))):
             raise ValueError("SYNTHE did not output expected files")
         notify("SYNTHE halted", silent)
