@@ -363,29 +363,30 @@ cd synthe_{synthe_num}/
 ln -s {s_files}/molecules.dat fort.2
 ln -s {s_files}/continua.dat fort.17
 
-# synthe_solar contains the ATLAS-9 output near-solar model with a few additional commands prepended
-# First, run xnfpelsyn.exe which takes the model and atomic and molecular densities (whatever that means)
+# xnfpelsyn.exe computes the chemical equilibrium
 {synthe_suite}/xnfpelsyn.exe< {synthe_solar}>xnfpelsyn.out
 mv fort.10 xnfpelsyn.dat
 rm fort.*
 
-# synberg.exe initializes the computation. It feeds on the computation parameters such as the wavelength range
-# (WLBEG to WLEND), resolution and more...
+# synberg.exe initializes the computation
 {synthe_suite}/synbeg.exe<<"EOF">synbeg.out
 {airorvac:<3s}       {wlbeg:<10.4f}{wlend:<10.4f}{resolu:<9.2f} {turbv:<10.4f}{ifnlte:<3d}{linout:<7d}{cutoff:<10.5f}{ifpred:<5d}{nread:<5d}
 AIRorVAC  WLBEG     WLEND     RESOLU    TURBV  IFNLTE LINOUT CUTOFF        NREAD
 EOF
 
-# Below we import all the spectral lines that we want. Ultimately, it is just a tonne of files with line parameters
-# each subsequently fed into rgfalllinesnew.exe for atoms and rmolecasc.exe for molecules
-ln -s {s_files}/gfall08oct17.dat fort.11
+# Import atomic lines
+ln -s {s_files}/BasicATLAS.dat fort.11
 {synthe_suite}/rgfalllinesnew.exe>rgfalllinesnew.out
 rm fort.11
 
-ln -s  {s_files}/chmasseron.asc fort.11
+# Set the C12/C13 ratio
+{C12C13}
+
+# Import diatomic molecular lines
+ln -s  {s_files}/chmasseron_corrected.asc fort.11
 {synthe_suite}/rmolecasc.exe>chmasseron.out
 rm fort.11
-ln -s {s_files}/mgh.asc fort.11
+ln -s {s_files}/mgh_exomol.asc fort.11
 {synthe_suite}/rmolecasc.exe>mgh.out
 rm fort.11
 ln -s {s_files}/nh.asc fort.11
@@ -443,33 +444,24 @@ ln -s {s_files}/sioxx.asc fort.11
 {synthe_suite}/rmolecasc.exe>sioxx.out
 rm fort.11
 
-# weird stuff: to be figured out...
-ln -s {d_files}/lowlines.bin fort.11
-{synthe_suite}/rpredict.exe>predictedlow.out
-rm fort.11
-ln -s {d_files}/highlines.bin fort.11
-{synthe_suite}/rpredict.exe>predicthigh.out
-rm fort.11
-
-
-# rschwenk.exe adds Titanium Oxide to the model (TiO) and requires two input databases
+# Import TiO lines
 ln -s {s_files}/tioschwenke.bin fort.11
 ln -s {s_files}/eschwenke.bin fort.48
 {synthe_suite}/rschwenk.exe>rschwenk.out
 rm fort.11
 rm fort.48
 
-# rh2ofast.exe does the same for water
+# Import H2O lines
 ln -s {s_files}/h2ofastfix.bin fort.11
 {synthe_suite}/rh2ofast.exe>h2ofastfix.out
 rm fort.11
 
-# synthe.exe requires the previously calculated atomic and molecular densities (by xnfpelsyn.exe) and computes line opacities
+# synthe.exe computes line opacities
 ln xnfpelsyn.dat fort.10
 ln -s {s_files}/he1tables.dat fort.18
 {synthe_suite}/synthe.exe>synthe.out
 
-# spectrv.exe computes the synthetic spectrum. I don't know what these parameters mean just yet.
+# spectrv.exe computes the synthetic spectrum
 ln -s {s_files}/molecules.dat fort.2
 cat <<"EOF" >fort.25
 0.0       0.        1.        0.        0.        0.        0.        0.
@@ -489,7 +481,7 @@ mv fort.2 spectrum.asc
 
 rm fort.*
 rm xnfpelsyn.dat
-rm spectrum.bin    # Remove binaries
+rm spectrum.bin
 """
 
 synthe_cleanup = """cd {output_dir}

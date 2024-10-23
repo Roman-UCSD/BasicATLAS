@@ -19,12 +19,13 @@ If you are using **BasicATLAS** in your research, please cite [Larkin et al. (20
 
 ## Contributors
 
-* Roman Gerasimov (University of California San Diego)
+* Roman Gerasimov (University of Notre Dame, University of California San Diego)
 * Mikaela Larkin (University of California San Diego)
 * Tianxing Zhou (University of California San Diego)
 * Philipp Edelmann (Los Alamos National Laboratory) @ [AAS 242](https://aas.org/meetings/aas242) Hack Together
 * Paul Barrett (George Washington University) @ [AAS 242](https://aas.org/meetings/aas242) Hack Together
 * Efrain Alvarado (University of California San Diego)
+* Evan Kirby (University of Notre Dame)
 
 ## Installation
 

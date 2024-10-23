@@ -68,6 +68,146 @@ EOF
 # Compile patched ATLAS-9
 gfortran -o bin/atlas9mem.exe src/atlas9mem.patched.for -finit-local-zero -fno-automatic -w -std=legacy
 
+# Patch RMOLECASC to allow alternative C12/C13 ratios
+patch -o src/rmolecasc.patched.for src/rmolecasc.for << EOF
+@@ -23,6 +23,7 @@ c      EQUIVALENCE (LINDAT8(1),WL),(LINDAT4(1),NELION)
+       character*10 LABEL,LABELP,OTHER1,OTHER2
+       REAL*8 RESOLU,RATIO,RATIOLG,SIGMA2,WLBEG,WLEND
+       REAL*8 WL,E,EP,WLVAC,CENTER,CONCEN
++      REAL*8 C12,C13
+ c      REAL*8 LABEL,LABELP,OTHER1,OTHER2
+ c      CHARACTER*8 CLABELP
+       CHARACTER*10 CLABELP
+@@ -42,6 +43,17 @@ c      REAL*8 ISOLAB(60)
+      3            '31','32','33','34','35','36','37','38','39','40',
+      4            '41','42','43','44','45','46','47','48','49','50',
+      5            '51','52','53','54','55','56','57','58','59','60'/
++
++ccc         OVERRIDE DEFAULT C12/C13 RATIO
++      C12=-.005d0
++      C13=-1.955d0
++      OPEN(UNIT=991, FILE='c12c13.dat', STATUS='OLD', IOSTAT=IOS)
++      IF (IOS .EQ. 0) THEN
++          READ(991, *) C12, C13
++          CLOSE(991)
++      ENDIF
++ccc         END OF OVERRIDE
++
+ C      OPEN(UNIT=11,TYPE='OLD',FORM='UNFORMATTED',RECORDTYPE='FIXED',
+ C     1ACCESS='DIRECT',RECL=16,READONLY,SHARED)
+       OPEN(UNIT=12,STATUS='OLD',FORM='UNFORMATTED',ACCESS='APPEND')
+@@ -160,7 +172,7 @@ C     CN
+       FUDGE=0.00
+       ISO1=12
+       ISO2=14
+-      X1=-.005
++      X1=C12
+       X2=-.002
+       GO TO 5000
+   130 IF(CODE.EQ.606.)GO TO 1300
+@@ -171,7 +183,7 @@ C     CN
+       FUDGE=0.00
+       ISO1=13
+       ISO2=14
+-      X1=-1.955
++      X1=C13
+       X2=-.002
+       GO TO 5000
+ C     NH
+@@ -206,7 +218,7 @@ C     CO
+       FUDGE=0.00
+       ISO1=12
+       ISO2=17
+-      X1=-.005
++      X1=C12
+       X2=-3.398
+       GO TO 5000
+   180 IF(CODE.EQ.814.)GO TO 1800
+@@ -284,16 +296,16 @@ C     C2
+       FUDGE=0.00
+       ISO1=13
+       ISO2=13
+-      X1=-1.955
+-      X2=-1.955
++      X1=C13
++      X2=C13
+       GO TO 5000
+ C     C2
+  1200 NELION=264
+       FUDGE=0.00
+       ISO1=12
+       ISO2=12
+-      X1=-.005
+-      X2=-.005
++      X1=C12
++      X2=C12
+       GO TO 5000
+ C     CaH
+   400 NELION=342
+@@ -479,7 +491,7 @@ C     CO
+       FUDGE=0.00
+       ISO1=12
+       ISO2=16
+-      X1=-.005
++      X1=C12
+       X2=-.001
+       GO TO 5000
+ C     CH
+@@ -488,22 +500,22 @@ C     CH
+       ISO1=1
+       ISO2=12
+       X1=0.
+-      X2=-.005
++      X2=C12
+       GO TO 5000
+ C     C2
+  1300 NELION=264
+       FUDGE=0.00
+       ISO1=12
+       ISO2=13
+-      X1=-.005
+-      X2=-1.955
++      X1=C12
++      X2=C13
+       GO TO 5000
+ C     CO
+  1310 NELION=276
+       FUDGE=0.00
+       ISO1=13
+       ISO2=16
+-      X1=-1.955
++      X1=C13
+       X2=-.001
+       GO TO 5000
+ C     CH
+@@ -512,14 +524,14 @@ C     CH
+       ISO1=1
+       ISO2=13
+       X1=0.
+-      X2=-1.955
++      X2=C13
+       GO TO 5000
+ C     CN
+  1500 NELION=270
+       FUDGE=0.00
+       ISO1=12
+       ISO2=15
+-      X1=-.005
++      X1=C12
+       X2=-2.444
+       GO TO 5000
+ C     ALO
+@@ -551,7 +563,7 @@ C     CO
+       FUDGE=0.00
+       ISO1=12
+       ISO2=18
+-      X1=-.005
++      X1=C12
+       X2=-2.690
+       GO TO 5000
+ C     ALO
+EOF
+
 # Patch SYNTHE to indicate calculation progress
 patch -o src/synthe.patched.for src/synthe.for << EOF
 @@ -213,7 +213,10 @@
@@ -98,7 +238,7 @@ gfortran xnfpelsyn.o atlas7v.o -o bin/xnfpelsyn.exe -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/synbeg.exe src/synbeg.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rgfalllinesnew.exe src/rgfalllinesnew.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rpredict.exe src/rpredict.for -std=legacy
-gfortran -fno-automatic -w -O3 -o bin/rmolecasc.exe src/rmolecasc.for -std=legacy
+gfortran -fno-automatic -w -O3 -o bin/rmolecasc.exe src/rmolecasc.patched.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rschwenk.exe src/rschwenk.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rh2ofast.exe src/rh2ofast.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/synthe.exe src/synthe.patched.for -std=legacy

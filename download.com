@@ -33,8 +33,6 @@ wget -nc -nv -O data/atlas_files/molecules.dat https://wwwuser.oats.inaf.it/cast
 wget -nc -nv -O src/atlas9mem.for https://wwwuser.oats.inaf.it/castelli/sources/atlas9g/atlas9mem.for
 
 
-wget -nc -nv -O data/synthe_files/chmasseron.asc http://kurucz.harvard.edu/molecules/ch/chmasseron.asc
-wget -nc -nv -O data/synthe_files/mgh.asc http://kurucz.harvard.edu/linelists/linesmol/mgh.asc
 wget -nc -nv -O data/synthe_files/nh.asc http://kurucz.harvard.edu/linelists/linesmol/nh.asc
 wget -nc -nv -O data/synthe_files/ohupdate.asc http://kurucz.harvard.edu/molecules/oh/ohupdate.asc
 wget -nc -nv -O data/synthe_files/sihax.asc http://kurucz.harvard.edu/molecules/sih/sihax.asc
@@ -75,3 +73,7 @@ wget -nc -nv -O src/rh2ofast.for http://wwwuser.oats.inaf.it/castelli/sources/sy
 wget -nc -nv -O src/synthe.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/synthe.for
 wget -nc -nv -O src/spectrv.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/spectrv.for
 wget -nc -nv -O src/converfsynnmtoa.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/converfsynnmtoa.for
+
+
+cp data/linelists/*.gz data/synthe_files/
+gzip -d data/synthe_files/*.gz

@@ -7,6 +7,7 @@ import subprocess
 import time
 from scipy.optimize import brentq
 import scipy.constants as spc
+import warnings
 
 from settings import Settings
 import templates
@@ -315,9 +316,9 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
             planck_peak = blackbody_peak(temperature)[1]
             planck_dT_peak = blackbody_dBdT_peak(temperature)[1]
             if blackbody(nu, temperature) > 1e-3 * planck_peak:
-                raise ValueError('Planck\'s law in one of the layers at temperature {} K does not vanish at the frequency grid bound {} Hz. The result may be inaccurate!'.format(temperature, nu))
+                warnings.warn('Planck\'s law in one of the layers at temperature {} K does not vanish at the frequency grid bound {} Hz. The result may be inaccurate!'.format(temperature, nu))
             if blackbody_dBdT(nu, temperature) > 1e-3 * planck_dT_peak:
-                raise ValueError('Derivative of Planck\'s law (dB/dT) in one of the layers at temperature {} K does not vanish at the frequency grid bound {} Hz. The result may be inaccurate!'.format(temperature, nu))
+                warnings.warn('Derivative of Planck\'s law (dB/dT) in one of the layers at temperature {} K does not vanish at the frequency grid bound {} Hz. The result may be inaccurate!'.format(temperature, nu))
 
     # Also check that the temperatures in all layers are within the ODF range
     ODF_temps = []
@@ -337,7 +338,7 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
                 ODF_pres += [line[2]]
     for temperature in [np.min(structure['temperature']), np.max(structure['temperature'])]:
         if temperature < np.min(ODF_temps) or temperature > np.max(ODF_temps):
-            raise ValueError('Gas temperature {} K  in one of the layers falls outside the ODF range [{}, {}]. The result may be inaccurate!'.format(temperature, np.min(ODF_temps), np.max(ODF_temps)))
+            warnings.warn('Gas temperature {} K  in one of the layers falls outside the ODF range [{}, {}]. The result may be inaccurate!'.format(temperature, np.min(ODF_temps), np.max(ODF_temps)))
 
     notify("Finished running ATLAS-9 in " + str(datetime.now() - startTime) + " s", silent)
 
@@ -365,7 +366,7 @@ def synbeg(min_wl, max_wl, res):
         wllast = np.e ** (ixwlend * ratiolg)
     return int(ixwlend - ixwlbeg + 1)
 
-def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, buffsize = 2010001, overwrite_prev = False, air_wl = False, silent = False, progress = True):
+def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, C12C13 = False, buffsize = 2010001, overwrite_prev = False, air_wl = False, silent = False, progress = True):
     """
     Run SYNTHE to calculate the emergent spectrum corresponding to an existing ATLAS model
 
@@ -376,6 +377,9 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, buffsize = 2
         res            :     Sampling resolution (lambda / delta_lambda)
         vturb          :     Turbulent velocity [km/s] (defaults to 1.5 km/s as per the average value measured by APOGEE
                              (III/284/allstars)). Note that ATLAS and DFSYNTHE have their own vturb values
+        C12C13         :     Carbon-12 to carbon-13 ratio to be used when evaluating the opacities of molecular species.
+                             Defaults to the value hard-coded in rmolecasc.for (10^-0.005 / 10^-1.955 ~ 89 at the time
+                             of writing)
         buffsize       :     Maximum allowed number of wavelength points per calculation. If the required number of points
                              exceeds this value, the calculation will be split into multiple batches. This argument is
                              introduced as SYNTHE allocates a buffer of finite size and cannot handle more wavelength
@@ -444,6 +448,14 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, buffsize = 2
             current_max_wl = max_wl
             completed = True
 
+        # C12/C13 ratio
+        if type(C12C13) is not bool:
+            C13 = 1 / (C12C13 + 1)
+            C12 = 1 - C13
+            C12C13 = 'echo "{} {}" > c12c13.dat'.format(np.log10(C12), np.log10(C13))
+        else:
+            C12C13 = 'rm -f c12c13.dat'
+
         # Generate a launcher command file
         cards = {
           's_files': python_path + '/data/synthe_files/',
@@ -462,6 +474,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, buffsize = 2
           'synthe_solar': output_dir + '/output_synthe.out',
           'output_dir': output_dir,
           'synthe_num': synthe_num,
+          'C12C13': C12C13,
         }
         file = open(output_dir + '/synthe_launch.com', 'w')
         file.write(templates.synthe_control.format(**cards))
@@ -540,6 +553,7 @@ def dfsynthe(output_dir, settings, silent = False):
     # Generate the XNFDF command file
     cards = {
       'd_data': python_path + '/data/dfsynthe_files/',
+      's_files': python_path + '/data/synthe_files/',
       'abundance_scale': 10 ** settings.zscale,
       'dfsynthe_suite': python_path + '/bin/',
       'output_dir': output_dir,
@@ -1261,6 +1275,8 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
 
     # Match the shape of the output to the shape of "reddening"
     for filename in BC_dict:
+        if np.isnan(BC_dict[filename]):
+            continue
         if reddening_is_array:
             try:
                 BC_dict[filename][0]
