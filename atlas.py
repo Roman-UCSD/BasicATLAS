@@ -366,7 +366,7 @@ def synbeg(min_wl, max_wl, res):
         wllast = np.e ** (ixwlend * ratiolg)
     return int(ixwlend - ixwlbeg + 1)
 
-def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, C12C13 = False, buffsize = 2010001, overwrite_prev = False, air_wl = False, silent = False, progress = True):
+def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, C12C13 = False, linelist = 'BasicATLAS', buffsize = 2010001, overwrite_prev = False, air_wl = False, silent = False, progress = True):
     """
     Run SYNTHE to calculate the emergent spectrum corresponding to an existing ATLAS model
 
@@ -380,6 +380,8 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, C12C13 = Fal
         C12C13         :     Carbon-12 to carbon-13 ratio to be used when evaluating the opacities of molecular species.
                              Defaults to the value hard-coded in rmolecasc.for (10^-0.005 / 10^-1.955 ~ 89 at the time
                              of writing)
+        linelist       :     Atomic line list to use in spectral synthesis. See data/linelists/README.txt for a discussion
+                             of available options. Defaults to the recommended line list
         buffsize       :     Maximum allowed number of wavelength points per calculation. If the required number of points
                              exceeds this value, the calculation will be split into multiple batches. This argument is
                              introduced as SYNTHE allocates a buffer of finite size and cannot handle more wavelength
@@ -456,6 +458,11 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, C12C13 = Fal
         else:
             C12C13 = 'rm -f c12c13.dat'
 
+        # Make sure the requested atomic line list exists
+        linelist = os.path.realpath(python_path + '/data/synthe_files/{}.dat'.format(linelist))
+        if not os.path.isfile(linelist):
+            raise ValueError('Linelist {} not found'.format(linelist))
+
         # Generate a launcher command file
         cards = {
           's_files': python_path + '/data/synthe_files/',
@@ -475,6 +482,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, C12C13 = Fal
           'output_dir': output_dir,
           'synthe_num': synthe_num,
           'C12C13': C12C13,
+          'linelist': linelist,
         }
         file = open(output_dir + '/synthe_launch.com', 'w')
         file.write(templates.synthe_control.format(**cards))

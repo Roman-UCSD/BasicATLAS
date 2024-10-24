@@ -375,7 +375,7 @@ AIRorVAC  WLBEG     WLEND     RESOLU    TURBV  IFNLTE LINOUT CUTOFF        NREAD
 EOF
 
 # Import atomic lines
-ln -s {s_files}/BasicATLAS.dat fort.11
+ln -s {linelist} fort.11
 {synthe_suite}/rgfalllinesnew.exe>rgfalllinesnew.out
 rm fort.11
 
