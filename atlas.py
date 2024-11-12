@@ -366,7 +366,7 @@ def synbeg(min_wl, max_wl, res):
         wllast = np.e ** (ixwlend * ratiolg)
     return int(ixwlend - ixwlbeg + 1)
 
-def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, C12C13 = False, linelist = 'BasicATLAS', buffsize = 2010001, overwrite_prev = False, air_wl = False, silent = False, progress = True):
+def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust = {}, C12C13 = False, linelist = 'BasicATLAS', buffsize = 2010001, overwrite_prev = False, air_wl = False, silent = False, progress = True):
     """
     Run SYNTHE to calculate the emergent spectrum corresponding to an existing ATLAS model
 
@@ -377,6 +377,12 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, C12C13 = Fal
         res            :     Sampling resolution (lambda / delta_lambda)
         vturb          :     Turbulent velocity [km/s] (defaults to 1.5 km/s as per the average value measured by APOGEE
                              (III/284/allstars)). Note that ATLAS and DFSYNTHE have their own vturb values
+        abun_adjust    :     Adjust abundances of specific elements for this spectral synthesis. The argument must be
+                             a dictionary, keyed by element names (e.g. 'Fe') with values corresponding to the adjustments
+                             in dex, compared to the chemical composition of the model atmosphere. The effect of adjusted
+                             abundances on the structure of the atmosphere will not be accounted for; however, said
+                             effect can be small in many cases. Maintaining the same structure and changing abundances
+                             only in the spectral synthesis is far more efficient than recalculating the entire model
         C12C13         :     Carbon-12 to carbon-13 ratio to be used when evaluating the opacities of molecular species.
                              Defaults to the value hard-coded in rmolecasc.for (10^-0.005 / 10^-1.955 ~ 89 at the time
                              of writing)
@@ -434,6 +440,30 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, C12C13 = Fal
     file.write(templates.synthe_prependix + model)
     file.close()
     notify("Adapted the ATLAS-9 model to SYNTHE in output_synthe.out", silent)
+
+    # Adjust abundances in spectral synthesis
+    if len(abun_adjust) != 0:
+        elements, params = parse_atlas_abundances(output_dir + '/output_synthe.out', lookbehind = 1, params = ['ABUNDANCE SCALE'])
+        settings = Settings().abun_atlas_to_std(elements, np.log10(params['ABUNDANCE SCALE']))
+        for element in abun_adjust:
+            if element not in settings['abun']:
+                settings['abun'][element] = 0
+            settings['abun'][element] += abun_adjust[element]
+        elements = Settings().abun_std_to_atlas(**settings)
+        template = templates.atlas_control
+        template = template[template.find('ABUNDANCE SCALE'):template.find('\n', template.find('ABUNDANCE CHANGE 99'))]
+        sub = {'element_{}'.format(i): elements[i] for i in range(1, 100)}
+        template = template.format(abundance_scale = 10 ** settings['zscale'], **sub)
+        f = open(output_dir + '/output_synthe.out', 'r')
+        content = f.read()
+        f.close()
+        start = content.find('ABUNDANCE SCALE')
+        end = content.find('\n', content.find('ABUNDANCE CHANGE 99'))
+        content = content[:start] + template + content[end:]
+        f = open(output_dir + '/output_synthe.out', 'w')
+        f.write(content)
+        f.close()
+        notify("Updated abundances in output_synthe.out for spectral synthesis", silent)
 
     synthe_num = 0            # Batch number
     completed = False         # The last batch sets this flag to True
@@ -733,6 +763,17 @@ def meta_atlas(run_dir):
             output['medium'] = 'vacuum'
         else:
             output['medium'] = 'unknown'
+        # Determine any abundance adjustments in SYNTHE
+        output['abun_adjust'] = {}
+        elements, params = parse_atlas_abundances(run_dir + '/output_synthe.out', lookbehind = 1, params = ['ABUNDANCE SCALE'])
+        synthe_abun = Settings().abun_atlas_to_std(elements, np.log10(params['ABUNDANCE SCALE']))
+        for element in list(synthe_abun['abun'].keys()) + list(output['abun'].keys()):
+            if (element in synthe_abun['abun']) and (element not in output['abun']):
+                output['abun_adjust'][element] = synthe_abun['abun'][element]
+            elif (element not in synthe_abun['abun']) and (element in output['abun']):
+                output['abun_adjust'][element] = -output['abun'][element]
+            elif (adjustment := np.round(synthe_abun['abun'][element] - output['abun'][element], 2)) != 0:
+                output['abun_adjust'][element] = adjustment
 
     return output
 
