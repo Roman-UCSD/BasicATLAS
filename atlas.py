@@ -1198,7 +1198,7 @@ def prepare_restart(restart, save_to, teff, logg = 0.0, zscale = 0.0, silent = F
     f.write(templates.atlas_restart.format(structure = ' ' + structure.strip(), teff = teff))
     f.close()
 
-def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/data/filters/', spectrum = False, max_spill = 1e-5, silent = False):
+def synphot(run_dir, mag_system, reddening = 0.0, Rv = 3.1, filters_dir = python_path + '/data/filters/', spectrum = False, max_spill = 1e-5, silent = False):
     """
     Carry out synthetic photometry for a given SYNTHE model and return bolometric corrections in various filters
     
@@ -1206,8 +1206,9 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
         run_dir        :     Output directory of the SYNTHE run of interest
         mag_system     :     Desired magnitude system ('VEGAMAG' or 'ABMAG')
         reddening      :     Optical reddening to the source (E(B-V)). Defaults to no reddening (0.0). Extinction is calculated
-                             for Rv=3.1 using the Fitzpatrick & Massa (2007) extinction law, implemented in the extinction module.
+                             using the Gordon et al. (2023) extinction law, implemented in the dust_extinction module.
                              The value may be a single number or a 1D array of reddenings for batch calculations
+        Rv             :     Total-to-selective extinction ratio (Rv). Defaults to the standard Milky Way value of 3.1
         filters_dir    :     Directory with filter transmission profiles. Alternatively, list of filenames of individual filters to
                              include in the calculation. Each transmission profile file must be a space-separated two-column text file
                              with wavelengths (in A) in column 1 and transmission fraction (between 0 and 1) in column 2
@@ -1296,11 +1297,20 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
             # Calculate interstellar extinction
             if E != 0.0:
                 try:
-                    import extinction
+                    from dust_extinction.parameter_averages import G23
+                    from astropy import units as u
+                    extmod = G23(Rv = Rv)
                 except:
-                    raise ValueError('Could not import the extinction module. For extinguished photometry, make sure the module is installed ( https://github.com/kbarbary/extinction ).')
-                Rv = 3.1 # Rv must be 3.1 for the FM07 law
-                extinction_law = lambda wl: extinction.fm07(np.array(wl), E * Rv)
+                    raise ValueError('Could not import the dust_extinction module. For extinguished photometry, make sure the module is installed ( https://dust-extinction.readthedocs.io/en/latest/ ).')
+                def extinction_law(wl):
+                    result = np.zeros(len(wl))
+                    wl_min = 912
+                    wl_max = 320000
+                    mask = (wl > wl_min) & (wl < wl_max)
+                    result[mask] = extmod(np.array(wl)[mask]  * u.Angstrom) * E * Rv
+                    if not np.all(mask):
+                        notify('The wavelength range of the spectrum ({}:{}) exceeds the domain of the extinction law ({}:{})'.format(np.min(wl), np.max(wl), wl_min, wl_max))
+                    return result
                 A = extinction_law(spectrum['wl'])
             else:
                 A = 0.0
@@ -1324,8 +1334,6 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
 
     # Match the shape of the output to the shape of "reddening"
     for filename in BC_dict:
-        if np.isnan(BC_dict[filename]):
-            continue
         if reddening_is_array:
             try:
                 BC_dict[filename][0]
@@ -1338,5 +1346,3 @@ def synphot(run_dir, mag_system, reddening = 0.0, filters_dir = python_path + '/
                 pass
 
     return BC_dict
-
-
