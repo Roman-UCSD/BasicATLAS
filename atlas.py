@@ -115,6 +115,7 @@ def atlas_converged(run_dir):
     file = open(run_dir + '/output_main.out', 'r')
     convergence = file.read()
     file.close()
+
     # Find the table with convergence parameters of the last iteration. The table would contain the word "TEFF" somewhere
     # in its header. It would also be the last thing in the output file, so it is safe to assume that the lines following
     # the last mention of "TEFF" in the file are the table we need.
@@ -145,6 +146,15 @@ def atlas_converged(run_dir):
     s = re.sub('(E.[0-9]{2})', r'\1 ', s)
     file.write('\n'.join(s.strip().split('\n')[:-1]))
     file.close()
+
+    # Check that the chemical equilibrium calculation finished successfully in the last iteration
+    if convergence.find('CHEMFAIL') != -1:
+        end = convergence.rfind('ITERATION')
+        start = convergence.rfind('ITERATION', 0, end)
+        if convergence[start:end].find('CHEMFAIL') != -1:
+            err = 88888.888
+            de = 88888.888
+            return err, de
 
     # Now that the last iteration table is properly formatted and available in a separate file, we can simply read it with np.loadtxt()
     # and get the convergence parameters.
