@@ -104,7 +104,7 @@ def blackbody_dBdT_peak(T):
     max_fun = blackbody_dBdT(max_nu, T)
     return max_nu, max_fun
 
-def atlas_converged(run_dir):
+def atlas_converged(run_dir, print_result = False, silent = False):
     """
     Calculate convergence parameters for a completed or an ongoing ATLAS run.
 
@@ -116,56 +116,77 @@ def atlas_converged(run_dir):
     convergence = file.read()
     file.close()
 
-    # Find the table with convergence parameters of the last iteration. The table would contain the word "TEFF" somewhere
-    # in its header. It would also be the last thing in the output file, so it is safe to assume that the lines following
-    # the last mention of "TEFF" in the file are the table we need.
-    file = open(run_dir + '/output_last_iteration.out', 'w')
-
     # TTAUP() prints pressure errors and exits when it cannot solve for hydrostatic equilibrium
     if convergence.find('0ERROR') != -1:
         raise ValueError('The run halted as no hydrostatic equilibrium configuration could be found for the prescribed temperature.')
 
-    # The table is generally space-separated, but negative signs can occasionally overflow the columns and replace the separating
-    # spaces, which will confuse np.loadtxt() that I intend to use later. We want to replace all "-" with " -" to ensure that there
-    # is a space in front of every number. However, "-" are also present in the scientific notation (e.g. 1.0E-10), which do not need
-    # to be replaced. My bodge here is to first replace all exponents with something temporary that does not contain "-" (in my case, "E="),
-    # then replace all "-" with " -" and finally bring all the exponents back.
-    s = convergence[convergence.rfind('TEFF'):].replace('E-', 'E=')
-    s = s.replace('-', ' -')
-    s = s.replace('E=', 'E-')
+    # Break the output into iterations and get the maximum flux error and maximum flux error derivative in each
+    iterations = re.findall('START TABLE.+?END TABLE', convergence, re.DOTALL)
+    cursor = 0
+    max_err = []; max_de = []
+    for i, iteration in enumerate(iterations):
 
-    # If numbers are too large, they get replaced with "*********", which can also confuse np.loadtxt(). Here, we replace all those masked
-    # numbers with the maximum supported number (99999.999). We are not introducing any errors here, because those numbers are only used to
-    # test for convergence and whether the number is 99999.999 or something larger does not matter, as both indicate non-convergence.
-    s = s.replace('*********', '99999.999')
-    s = s.replace('E=', 'E-')
+        # Determine where this iteration starts and ends
+        end = convergence.find('END TABLE', cursor)
+        cursor = end + 1
+        start = convergence.rfind('END TABLE', 0, cursor)
+        if start == -1:
+            start = 0
 
-    # Finally,  we run the two regular expression searches below to fix excessively long numbers that are clashing with each other. We use the
-    # fact that ATLAS always outputs 3 decimal places of precision and two digits in the exponent.
-    s = re.sub('(\.[0-9]{3})([0-9])', r'\1 \2', s)
-    s = re.sub('(E.[0-9]{2})', r'\1 ', s)
-    file.write('\n'.join(s.strip().split('\n')[:-1]))
-    file.close()
-
-    # Check that the chemical equilibrium calculation finished successfully in the last iteration
-    if convergence.find('CHEMFAIL') != -1:
-        end = convergence.rfind('ITERATION')
-        start = convergence.rfind('ITERATION', 0, end)
+        # Check that the chemical equilibrium calculation finished successfully
         if convergence[start:end].find('CHEMFAIL') != -1:
-            err = 88888.888
-            de = 88888.888
-            return err, de
+            max_err += [88888.888]
+            max_de += [88888.888]
+            continue
 
-    # Now that the last iteration table is properly formatted and available in a separate file, we can simply read it with np.loadtxt()
-    # and get the convergence parameters.
-    try:
-        err, de = np.loadtxt(run_dir + '/output_last_iteration.out', skiprows = 3, unpack = True, usecols = [11, 12])
-    except:
-        err = 99999.999
-        de = 99999.999
+        # Remove header and footer
+        s = iteration.split('\n')[4:-1]
+        assert(len(s) == 72)
+        s = '\n'.join(s)
+
+        err, de = np.loadtxt(s.split('\n'), unpack = True, usecols = [11, 12])
+        max_err += [np.max(np.abs(err))]
+        max_de += [np.max(np.abs(de))]
+
+    # Decide on the best iteration
+    max_err = np.array(max_err); max_de = np.array(max_de)
+    gold = (max_err < 1.0) & (max_de < 10.0)
+    silver = (max_err < 10.0) & (max_de < 100.0)
+    bronze = (max_err < 1000.0)
+    unconv = (~gold) & (~silver) & (~bronze)
+    if np.count_nonzero(gold) > 0:
+        best = np.arange(len(max_err))[gold][np.argmin(max_err[gold])]; conv = 'GOLD'
+    elif np.count_nonzero(silver) > 0:
+        best = np.arange(len(max_err))[silver][np.argmin(max_err[silver])]; conv = 'SILVER'
+    elif np.count_nonzero(bronze) > 0:
+        best = np.arange(len(max_err))[bronze][np.argmin(max_err[bronze])]; conv = 'BRONZE'
+    else:
+        best = np.arange(len(max_err))[unconv][np.argmin(max_err[unconv])]; conv = 'UNCONVERGED'
+    if print_result:
+        notify('Total iterations: {} | Best iteration: {}'.format(len(max_de), best + 1), silent)
+        notify('For the best iteration: max[|err|] = {} | max[|de|] = {} | convergence class: {}'.format(max_err[best], max_de[best], conv), silent)
+
+    # Save the best iteration in a separate file and get its errors
+    file = open(run_dir + '/output_last_iteration.out', 'w')
+    file.write('\n'.join(iterations[best].split('\n')[4:-1]))
+    file.close()
+    err, de = np.loadtxt(run_dir + '/output_last_iteration.out', unpack = True, usecols = [11, 12])
+
+
+    # If fort.7 exists, remove all iterations from it except for the best one
+    if os.path.isfile(run_dir + '/fort.7'):
+        file = open(run_dir + '/fort.7', 'r')
+        content = file.read()
+        file.close()
+        content = content.split('\n==========\n')[:-1]
+        assert len(content) == len(max_err)
+        file = open(run_dir + '/fort.7', 'w')
+        file.write(content[best])
+        file.close()
+
     return err, de
 
-def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = python_path + '/data/solar_ODF', molecules = True, silent = False):
+def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 450, ODF = python_path + '/data/solar_ODF', molecules = True, silent = False):
     """
     Run ATLAS-9 to calculate a model stellar atmosphere
 
@@ -177,7 +198,9 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
                              Set to "auto" to select the closest restart file (by teff, logg, zscale) from the library
                              of available restarts in atlas.restart_paths. Alternatively, set to "grey" to use a grey
                              atmosphere profile under the two-stream approximation
-        niter          :     Number of iterations. Use 0 to iterate until convergence (or lack of progress)
+        niter          :     Maximum number of iterations. Iterations will be carried out in batches of 15, and may be
+                             stopped before reaching this number if the final iteration in a batch meets the gold
+                             convergence requirement (max[|err|] < 1 and max[|de|] < 10)
         ODF            :     Output directory of a DFSYNTHE run with required Opacity Distribution Functions and Rosseland
                              mean opacities
         molecules      :     If True (default), model formation of molecules. When set to False, atomic number densities
@@ -228,12 +251,9 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
         cards['element_' + str(z)] = abundance
     cards['element_1'] = settings.atlas_abun()[1]
     cards['element_2'] = settings.atlas_abun()[2]
-    if niter != 0:
-        cards.update({'iterations': templates.atlas_iterations.format(iterations = '15') * int(np.floor(int(niter) / 15))})
-        if int(niter) % 15 != 0:
-            cards['iterations'] += templates.atlas_iterations.format(iterations = str(int(niter) % 15))
-    else:
-        cards.update({'iterations': templates.atlas_iterations.format(iterations = '15')})
+    cards.update({'iterations': templates.atlas_iterations.format(iterations = '15') * int(np.floor(int(niter) / 15))})
+    if int(niter) % 15 != 0:
+        cards['iterations'] += templates.atlas_iterations.format(iterations = str(int(niter) % 15))
     file = open(output_dir + '/atlas_control_start.com', 'w')
     file.write(templates.atlas_control_start.format(**cards))
     file.close()
@@ -251,42 +271,15 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 0, ODF = 
     # For a manual number of iterations, it is sufficient to source atlas_control.com
     # For an automatic number of iterations, we will source atlas_control.com multiple times replacing the initial model with the output each time
     cmd('bash {}/atlas_control.com'.format(output_dir))
-    if (int(niter) == 0):
-        notify("Starting automatic iterations...", silent)
-        # Check for covergence
-        err, de = atlas_converged(output_dir)
-        notify("15 iterations completed: max[abs(err)] = " + str(np.max(np.abs(err))) + " | max[abs(de)] = " + str(np.max(np.abs(de))), silent)
-        max_i = 30
-        i = 0
-        # Keep going until converged, or until some limit is reached
-        while (np.max(np.abs(err)) > 1) or (np.max(np.abs(de)) > 10):
-            i += 1
-            if i == max_i:
-                notify("Exceeded the maximum number of iterations ;(", silent)
-                break
-            # Replace initial model with output
-            os.rename(output_dir + '/fort.7', output_dir + '/fort.3')
-
-            cmd('bash {}/atlas_control.com'.format(output_dir))
-            err_old = np.max(np.abs(err))
-            de_old = np.max(np.abs(de))
-            err, de = atlas_converged(output_dir)
-            notify(str(i * 15 + 15) + " iterations completed: max[abs(err)] = " + str(np.max(np.abs(err))) + " | max[abs(de)] = " + str(np.max(np.abs(de))), silent)
-            if (err_old - np.max(np.abs(err)) + de_old - np.max(np.abs(de))) < 0.1 and (i > 10):
-                notify("The model is unlikely to converge any better ;(", silent)
-                break
     notify("ATLAS-9 halted", silent)
     validate_run(output_dir, silent = silent)
-    
+
+    # atlas_converged() will extract the best iteration and print its convergence parameters
+    atlas_converged(output_dir, True, silent)
+
     cmd('bash {}/atlas_control_end.com'.format(output_dir))
     if not (os.path.isfile(cards['output_1']) and os.path.isfile(cards['output_2'])):
         raise ValueError("ATLAS-9 did not output expected files")
-
-    # Check convergence
-    err, de = atlas_converged(output_dir)
-    notify("\nFinal convergence: max[abs(err)] = " + str(np.max(np.abs(err))) + " | max[abs(de)] = " + str(np.max(np.abs(de))), silent)
-    if (np.max(np.abs(err)) > 1) or (np.max(np.abs(de)) > 10):
-        notify("Failed to converge", silent)
 
     # Save data in a NumPy friendly format
     file = open(cards['output_2'], 'r')

@@ -345,7 +345,7 @@ rm fort.*
 
 
 atlas_iterations = """ITERATIONS {iterations} PRINT 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-PUNCH 0 1 0 0 0 0 0 0 0 0 0 0 0 0 1
+PUNCH 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
 BEGIN                    ITERATION  10 COMPLETED
 """
 
