@@ -207,7 +207,7 @@ class Settings:
     # value of metallicity can be accurately represented in this format
     @zscale.setter
     def zscale(self, d):
-        formatted = '{:>9.5f}'.format(10 ** d)
+        formatted = '{:>9.6f}'.format(10 ** d)
         if len(formatted) > 9:
             raise ValueError('Overflow in zscale value')
         formatted = float(formatted)

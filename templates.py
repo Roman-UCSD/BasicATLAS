@@ -54,7 +54,7 @@ VTURB {vturb}.0E+5
 CONVECTION OVER 1.25 0 36  
 TITLE  BasicATLAS
 SCALE 72 -6.875 0.125 {teff:<6.0f} {gravity:<7.4f}
-ABUNDANCE SCALE {abundance_scale:>9.5f} ABUNDANCE CHANGE 1 {element_1:>7.5f} 2 {element_2:>7.5f}
+ABUNDANCE SCALE {abundance_scale:>9.6f} ABUNDANCE CHANGE 1 {element_1:>7.5f} 2 {element_2:>7.5f}
  ABUNDANCE CHANGE  3 {element_3:>6.2f}  4 {element_4:>6.2f}  5 {element_5:>6.2f}  6 {element_6:>6.2f}  7 {element_7:>6.2f}  8 {element_8:>6.2f}
  ABUNDANCE CHANGE  9 {element_9:>6.2f} 10 {element_10:>6.2f} 11 {element_11:>6.2f} 12 {element_12:>6.2f} 13 {element_13:>6.2f} 14 {element_14:>6.2f}
  ABUNDANCE CHANGE 15 {element_15:>6.2f} 16 {element_16:>6.2f} 17 {element_17:>6.2f} 18 {element_18:>6.2f} 19 {element_19:>6.2f} 20 {element_20:>6.2f}
@@ -89,7 +89,7 @@ TITLE ROSSELAND OPACITY
  OPACITY IFOP 1 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 0 0 0 0
  CONVECTION ON   1.25 TURBULENCE OFF  0.00  0.00  0.00  0.00
 TEFF   5777.  GRAVITY 4.43770 LTE
-ABUNDANCE SCALE {abundance_scale:>9.5f} ABUNDANCE CHANGE 1 {element_1:>7.5f} 2 {element_2:>7.5f}
+ABUNDANCE SCALE {abundance_scale:>9.6f} ABUNDANCE CHANGE 1 {element_1:>7.5f} 2 {element_2:>7.5f}
  ABUNDANCE CHANGE  3 {element_3:>6.2f}  4 {element_4:>6.2f}  5 {element_5:>6.2f}  6 {element_6:>6.2f}  7 {element_7:>6.2f}  8 {element_8:>6.2f}
  ABUNDANCE CHANGE  9 {element_9:>6.2f} 10 {element_10:>6.2f} 11 {element_11:>6.2f} 12 {element_12:>6.2f} 13 {element_13:>6.2f} 14 {element_14:>6.2f}
  ABUNDANCE CHANGE 15 {element_15:>6.2f} 16 {element_16:>6.2f} 17 {element_17:>6.2f} 18 {element_18:>6.2f} 19 {element_19:>6.2f} 20 {element_20:>6.2f}
@@ -224,7 +224,7 @@ xnfdf_control = """TEFF   5777.  GRAVITY 4.43770 LTE
 TITLE TEMPERATUES AND PRESSURES FOR DISTRIBUTION FUNCTION CALCULATION
  OPACITY IFOP 1 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 0 0 0 0
  CONVECTION ON   1.25 TURBULENCE OFF  0.00  0.00  0.00  0.00
-ABUNDANCE SCALE {abundance_scale:>9.5f} ABUNDANCE CHANGE 1 {element_1:>7.5f} 2 {element_2:>7.5f}
+ABUNDANCE SCALE {abundance_scale:>9.6f} ABUNDANCE CHANGE 1 {element_1:>7.5f} 2 {element_2:>7.5f}
  ABUNDANCE CHANGE  3 {element_3:>6.2f}  4 {element_4:>6.2f}  5 {element_5:>6.2f}  6 {element_6:>6.2f}  7 {element_7:>6.2f}  8 {element_8:>6.2f}
  ABUNDANCE CHANGE  9 {element_9:>6.2f} 10 {element_10:>6.2f} 11 {element_11:>6.2f} 12 {element_12:>6.2f} 13 {element_13:>6.2f} 14 {element_14:>6.2f}
  ABUNDANCE CHANGE 15 {element_15:>6.2f} 16 {element_16:>6.2f} 17 {element_17:>6.2f} 18 {element_18:>6.2f} 19 {element_19:>6.2f} 20 {element_20:>6.2f}
