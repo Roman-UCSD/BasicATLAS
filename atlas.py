@@ -1006,7 +1006,7 @@ def read_structure(run_dir):
     f = open(run_dir + '/output_last_iteration.out', 'r')
     data = f.read().replace('*', '9').split('\n')
     f.close()
-    data = np.loadtxt(data, skiprows = 3, unpack = True)
+    data = np.loadtxt(data, unpack = True)
     structure['mass_column_density'] = data[1]
     units['mass_column_density'] = 'g cm^-2'
     structure['density'] = data[5]
