@@ -104,21 +104,43 @@ def blackbody_dBdT_peak(T):
     max_fun = blackbody_dBdT(max_nu, T)
     return max_nu, max_fun
 
-def atlas_converged(run_dir, print_result = False, silent = False):
+def atlas_converged(run_dir, print_result = False, silent = False, niter = 0):
     """
-    Calculate convergence parameters for a completed or an ongoing ATLAS run.
+    Evaluate the convergence parameters and extract the best iteration for a completed or ongoing ATLAS run
+
+    The function evaluates all available iterations and determines the maximum flux error and maximum flux
+    derivative error for each. It then determines what the best iteration is, and extracts it into the file
+    output_last_iteration.out, which is subsequently used by other functions
+
+    For all iterations where the chemical equilibrium could not be found, the maximum errors are set to 88888.888,
+    so they are not considered in selecting the best iteration (unless all other iterations are extremely bad)
+
+    If the ATLAS run is ongoing (i.e. fort.7 is present in the run directory), the function will place the atmospheric
+    structure of the best iteration into it
+
+    The expected maximum number of iterations in the run can be provided in "niter". Then, if the run has fewer iterations,
+    the function will attempt to determine the reason why it stopped prematurely, and raise an exception if the reason is
+    unknown
 
     arguments:
         run_dir      :         Output directory of the ATLAS run
+        print_result :         If True, will display the number of the best iteration, the total number of iterations,
+                               the convergence parameters of the best iteration, and potentially warn the user if the
+                               run terminated prematurely due to an issue with the model (the latter would only work
+                               if "niter" is specified)
+        silent       :         Do not print status messages. Must be set to False for "print_result" to display
+                               notifications
+        niter        :         Maximum number of iterations in the run. Required to determine if the run terminated
+                               prematurely
+
+    returns:
+        err          :         Array of flux errors in the best iteration
+        de           :         Array of flux derivative errors in the best iteration
     """
     # Read the main output file
     file = open(run_dir + '/output_main.out', 'r')
     convergence = file.read()
     file.close()
-
-    # TTAUP() prints pressure errors and exits when it cannot solve for hydrostatic equilibrium
-    if convergence.find('0ERROR') != -1:
-        raise ValueError('The run halted as no hydrostatic equilibrium configuration could be found for the prescribed temperature.')
 
     # Break the output into iterations and get the maximum flux error and maximum flux error derivative in each
     iterations = re.findall('START TABLE.+?END TABLE', convergence, re.DOTALL)
@@ -183,6 +205,21 @@ def atlas_converged(run_dir, print_result = False, silent = False):
         file = open(run_dir + '/fort.7', 'w')
         file.write(content[best])
         file.close()
+
+    # Determine if this run was successful (we also consider failed models that terminated with definitive error codes successful)
+    success = False
+    if (niter == 0) or (niter == len(max_err)):
+        success = True
+    if convergence.find('REACHED GOLD TOLERANCES') != -1:
+        success = True
+    if convergence.find('MODEL DIVERGED') != -1 or convergence.find('NAN DETECTED') != -1:
+        success = True
+        if print_result: notify('**WARNING:** Model terminated due to divergence', silent)
+    if convergence.find('HYDROFAIL') != -1:
+        success = True
+        if print_result: notify('**WARNING:** Model terminated due to hydrostatic failure', silent)
+    if not success:
+        raise ValueError('Model terminated due to unknown reason')
 
     return err, de
 
@@ -275,7 +312,7 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 450, ODF 
     validate_run(output_dir, silent = silent)
 
     # atlas_converged() will extract the best iteration and print its convergence parameters
-    atlas_converged(output_dir, True, silent)
+    atlas_converged(output_dir, True, silent, niter)
 
     cmd('bash {}/atlas_control_end.com'.format(output_dir))
     if not (os.path.isfile(cards['output_1']) and os.path.isfile(cards['output_2'])):

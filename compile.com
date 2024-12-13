@@ -47,6 +47,9 @@ rm repacknlte.out
 #   (3) Remove unnecessary output
 #   (4) Implement maximum number of iterations in chemical equilibrium and report when the limit is reached
 #   (5) Stop iterations automatically once the gold convergence has been reached
+#   (6) Stop and report when hydrostatic solver fails
+#   (7) Stop and report when NaNs appear in the temperature structure
+#   (8) Stop and report if the model is clearly diverging
 patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
 @@ -530,7 +530,7 @@ C     SUM OVER STEPS AND STEP DEPENDENT QUANTITIES
    301 SURFIN(MU)=SURFIN(MU)+SURFI(MU)*STEPWT
@@ -76,7 +79,7 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
    101 FORMAT(1H1/////10X,4HWAVE,7X,7HHLAMBDA,7X,5HLOG H,7X,3HMAG,
       1 10X,9HFREQUENCY,8X,3HHNU,10X,5HLOG H,7X,3HMAG,10X,6HTAUONE,
       2 6H TAUNU)
-@@ -636,35 +637,51 @@ C
+@@ -636,35 +637,57 @@ C
  C     SUMMARIES
    500 IF(IFPRNT(ITER).EQ.0)GO TO 550
  C      IF(IFPRNT(ITER).EQ.1)GO TO 540
@@ -103,6 +106,12 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
        CALL W('PRADK0',PRADK0,1)
 - 540  WRITE(6,541)TEFF,GLOG,TITLE,ITER
 -  541 FORMAT(1H1//////5H TEFF,F8.0,8H   LOG G,F9.5,10X,74A1,2X,
++      DO J=1,NRHOX
++      IF(T(J).NE.T(J))THEN
++      WRITE(*,*) 'NAN DETECTED'
++      STOP
++      ENDIF
++      ENDDO
 + 540  WRITE(*,*) 'START TABLE'
 +      WRITE(6,541)TEFF,GLOG,TITLE,ITER
 +  541 FORMAT(5H TEFF,F8.0,8H   LOG G,F9.5,10X,74A1,2X,
@@ -140,7 +149,7 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
    550 IF(IFPNCH(ITER).EQ.0)RETURN
  C
  C     PUNCHOUT
-@@ -680,9 +697,9 @@ C    1TRBPOW,TRBSND,TRBCON,XSCALE,(IZ,ABUND(IZ),IZ=1,2)
+@@ -680,9 +703,9 @@ C    1TRBPOW,TRBSND,TRBCON,XSCALE,(IZ,ABUND(IZ),IZ=1,2)
       24F6.2/16HABUNDANCE SCALE ,F9.5,17H ABUNDANCE CHANGE,2(I2,F8.5)/
       3(17H ABUNDANCE CHANGE,6(I3,F7.2)))
        WRITE(7,554)NRHOX,(RHOX(J),T(J),P(J),XNE(J),ABROSS(J),ACCRAD(J),
@@ -152,7 +161,7 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
        WRITE(7,555)PRADK0
    555 FORMAT(5HPRADK,1PE11.4)
        IF(NLTEON.EQ.0)GO TO 560
-@@ -695,7 +712,14 @@ C    1NU=1,NUMNU)
+@@ -695,7 +718,18 @@ C    1NU=1,NUMNU)
  C 562 FORMAT(16HREAD FREQUENCIES3I4,3X6A1/(I5,1P2E17.8,I5,2E17.8))
    570 WRITE(7,571)ITER
    571 FORMAT(5HBEGIN,20X,10HITERATION I3,10H COMPLETED )
@@ -165,10 +174,14 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
 +      WRITE(*,*) 'REACHED GOLD TOLERANCES'
 +      STOP
 +      ENDIF
++      IF((MOD(ITER,15).EQ.0).AND.(AMAXDER.GT.100000))THEN
++      WRITE(*,*) 'MODEL DIVERGED'
++      STOP
++      ENDIF
        RETURN
        END
        SUBROUTINE TCORR(MODE,RCOWT)
-@@ -917,8 +941,8 @@ C
+@@ -917,8 +951,8 @@ C
     50 T1(J)=DTFLUX(J)+DTLAMB(J)+DTSURF(J)
  C     IF(IFPRNT(ITER).LE.1)GO TO 60
        IF(IFPRNT(ITER).EQ.0)GO TO 60
@@ -179,7 +192,7 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
    100 FORMAT(1H1///95H0         RHOX        T      DTLAMB   DTSURF   DTF
       1LUX      T1   CONV/TOTAL      ERROR     DERIV/
       2(I4,1PE12.4,0PF10.1,4F9.1,1X,1PE11.3,1X,0P2F10.3))
-@@ -1232,7 +1256,7 @@ C
+@@ -1232,7 +1266,7 @@ C
    110 FORMAT (6X21F6.2)
    120 CONTINUE
  C
@@ -188,7 +201,7 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
    170 FORMAT(1H1/////30X36HSTATISTICAL EQUILIBRIUM FOR HYDROGEN/
       1 15X4HRHOX,10X2HB1,8X2HB2,8X2HB3,8X2HB4,8X2HB5,8X2HB6/
       2(8XI2,1PE11.4,1X0P6F10.4))
-@@ -1546,7 +1570,7 @@ C     THACHER, MATH. OF COMP.,22,641(1968)
+@@ -1546,7 +1580,7 @@ C     THACHER, MATH. OF COMP.,22,641(1968)
        PARAMETER (kw=99)
        DIMENSION B(1)
        character*6 A
@@ -197,7 +210,15 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
    100 FORMAT(1H0,A6,1P10E12.4/(7X,10E12.4))
        RETURN
        END
-@@ -4721,7 +4745,7 @@ C      IF(ITEMP.GT.0)RETURN
+@@ -3308,6 +3342,7 @@ C     T(1)=T1
+       CALL W('PTURB ',PTURB,J)
+       CALL W('ABSTD ',ABSTD,J)
+       CALL W('ERROR ',ERROR,1)
++      WRITE(*,*) 'HYDROFAIL'
+       CALL EXIT
+       END
+       SUBROUTINE BLOCKE
+@@ -4721,7 +4756,7 @@ C      IF(ITEMP.GT.0)RETURN
  C      IF(IFMOL.EQ.0)RETURN
  C      IF(IFPRES.EQ.0)RETURN
  C      OPEN(UNIT=2,STATUS='OLD',SHARED,READONLY)
@@ -206,7 +227,7 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
     10 FORMAT(16H1MOLECULES INPUT)
        DO 11 I=1,101
     11 IFEQUA(I)=0
-@@ -4733,7 +4757,7 @@ C     IF IFEQUA=1 AN EQUATION MUST BE SET UP FOR ELEMENT I
+@@ -4733,7 +4768,7 @@ C     IF IFEQUA=1 AN EQUATION MUST BE SET UP FOR ELEMENT I
        READ(2,13)C,E1,E2,E3,E4,E5,E6
     13 FORMAT(F18.2,F7.3,5E11.4)
        IF(C.EQ.0.)GO TO 23
@@ -215,7 +236,7 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
     14 FORMAT(I5,F18.2,F7.3,1P5E11.4)
        DO 15 II=1,8
        IF(C.GE.XCODE(II))GO TO 16
-@@ -13727,7 +13751,9 @@ C     2 106.206*T10000**5-30.8720*T10000**6-1.5*TLOG(J))
+@@ -13727,7 +13762,9 @@ C     2 106.206*T10000**5-30.8720*T10000**6-1.5*TLOG(J))
  C
  C     SET UP 1ST ORDER EQUATIONS FOR THE CHANGE IN NUMBER DENSITY OF
  C        EACH ELEMENT.
@@ -226,7 +247,7 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
     60 DEQ(KL)=0.
        EQ(1)=-XNTOT
        K1=1
-@@ -13817,7 +13843,12 @@ cc      XN(K)=XNEQ
+@@ -13817,7 +13854,12 @@ cc      XN(K)=XNEQ
        GO TO 105
  C 102 XN(K)=XN100
    105 EQOLD(K)=EQ(K)
@@ -239,7 +260,7 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
  C
        DO 107 K=1,NEQUA
    107 XNZ(J,K)=XN(K)
-@@ -13842,16 +13873,17 @@ C
+@@ -13842,16 +13884,17 @@ C
        DO 1111 J=1,NRHOX
   1111 XNSAVE(J,K)=XNZ(J,K)
        IF(ITER.LT.NUMITS)GO TO 120
