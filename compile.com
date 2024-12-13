@@ -108,7 +108,7 @@ patch -o src/atlas9mem.patched.for src/atlas9mem.for <<EOF
 -  541 FORMAT(1H1//////5H TEFF,F8.0,8H   LOG G,F9.5,10X,74A1,2X,
 +      DO J=1,NRHOX
 +      IF((T(J).NE.T(J)).OR.(FLXERR(J).NE.FLXERR(J)).OR.
-+     1 (FLXDRV(J).NE.FLXDRV(J)))THEN
++     1 (FLXDRV(J).NE.FLXDRV(J)).OR.(RHOX(J).NE.RHOX(J)))THEN
 +      WRITE(*,*) 'NAN DETECTED'
 +      STOP
 +      ENDIF
