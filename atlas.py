@@ -1004,9 +1004,13 @@ def read_structure(run_dir):
 
     # Replace all "*" with 9s. "*" are returned when the number cannot be represented otherwise
     f = open(run_dir + '/output_last_iteration.out', 'r')
-    data = f.read().replace('*', '9').split('\n')
+    data = f.read().replace('*', '9')
     f.close()
-    data = np.loadtxt(data, unpack = True)
+    # Backwards compatibility with old output_last_iteration.out format
+    if data.strip().find('TEFF') == 0:
+        data = np.loadtxt(data.split('\n'), skiprows = 3, unpack = True)
+    else:
+        data = np.loadtxt(data.split('\n'), unpack = True)
     structure['mass_column_density'] = data[1]
     units['mass_column_density'] = 'g cm^-2'
     structure['density'] = data[5]
