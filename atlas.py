@@ -170,6 +170,9 @@ def atlas_converged(run_dir, print_result = False, silent = False, niter = 0):
         max_err += [np.max(np.abs(err))]
         max_de += [np.max(np.abs(de))]
 
+    if len(max_err) == 0:
+        raise ValueError('The model diverged immediately: no iterations could be completed')
+
     # Decide on the best iteration
     max_err = np.array(max_err); max_de = np.array(max_de)
     gold = (max_err < 1.0) & (max_de < 10.0)
@@ -212,7 +215,7 @@ def atlas_converged(run_dir, print_result = False, silent = False, niter = 0):
         success = True
     if convergence.find('REACHED GOLD TOLERANCES') != -1:
         success = True
-    if convergence.find('MODEL DIVERGED') != -1 or convergence.find('NAN DETECTED') != -1:
+    if convergence.find('MODEL DIVERGED') != -1 or convergence.find('INVALID STRUCTURE') != -1:
         success = True
         if print_result: notify('**WARNING:** Model terminated due to divergence', silent)
     if convergence.find('HYDROFAIL') != -1:
@@ -304,31 +307,17 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 450, ODF 
 
     # Run ATLAS
     cmd('bash {}/atlas_control_start.com'.format(output_dir))
-
-    # For a manual number of iterations, it is sufficient to source atlas_control.com
-    # For an automatic number of iterations, we will source atlas_control.com multiple times replacing the initial model with the output each time
     cmd('bash {}/atlas_control.com'.format(output_dir))
     notify("ATLAS-9 halted", silent)
-    validate_run(output_dir, silent = silent)
 
     # atlas_converged() will extract the best iteration and print its convergence parameters
     atlas_converged(output_dir, True, silent, niter)
 
+    validate_run(output_dir, silent = silent)
+
     cmd('bash {}/atlas_control_end.com'.format(output_dir))
     if not (os.path.isfile(cards['output_1']) and os.path.isfile(cards['output_2'])):
         raise ValueError("ATLAS-9 did not output expected files")
-
-    # Save data in a NumPy friendly format
-    file = open(cards['output_2'], 'r')
-    data = file.read()
-    file.close()
-    file = open(output_dir + '/model.dat', 'w')
-    file.write(data[data.rfind('RHOX'):data.rfind('PRADK')])
-    file.close()
-    data = np.loadtxt(output_dir + '/model.dat', unpack = True, skiprows = 1, usecols = [0, 1, 2])
-    data[2] = 0.000001 * data[2]    # Bars conversion
-    np.savetxt(output_dir + '/model.dat', data.T, delimiter = ',', header = 'Mass Column Density [g cm^-2],Temperature [K],Pressure [Bar]')
-    notify("Saved the model in model.dat", silent)
 
     # ATLAS carries out all frequency integrations over a fixed range of wavelengths that may not be large enough to accommodate
     # very high temperatures (>200 kK). Here we check if the frequency range is appropriate for the entire temperature run of the model
@@ -1017,7 +1006,9 @@ def read_structure(run_dir):
     file = open(run_dir + '/output_summary.out', 'r')
     data = file.read()
     file.close()
-    data = np.loadtxt(data[data.rfind('RHOX'):data.rfind('PRADK')].split('\n'), unpack = True, skiprows = 1)
+    data = data[data.rfind('RHOX'):data.rfind('PRADK')]
+    data = data.replace('E-', 'E=').replace('-', ' -').replace('E=', 'E-')
+    data = np.loadtxt(data.split('\n'), unpack = True, skiprows = 1)
     structure['layer'] = np.arange(1, np.shape(data)[1] + 1)
     units['layer'] = ''
     structure['temperature'] = data[1]

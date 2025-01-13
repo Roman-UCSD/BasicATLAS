@@ -140,6 +140,8 @@ class Settings:
         runs silently with no returned value if the ODF is compatible, but throws an exception otherwise
         """
         solar = self.abun_solar()
+        Z, A = np.loadtxt(python_path + '/data/solar.csv', usecols = [0, 1], unpack = True, delimiter = ',')
+        symbol = np.loadtxt(python_path + '/data/solar.csv', usecols = [5], unpack = True, delimiter = ',', dtype = str)
         Y = self.mass_fractions()[1]
 
         if np.abs(ODF['zscale'] - self.zscale) > 0.01:
@@ -159,7 +161,7 @@ class Settings:
             else:
                 self_value = 0.0
             # We have to be careful here as sometimes discrepancies are due to the ODF abundance being floored (cannot go below -20 in ATLAS format)
-            if ODF_value != self_value and not (atlas_abun[int(Z[symbol == element][0])] == -20.0 and ODF_value > self_value):
+            if np.abs(ODF_value - self_value) > 0.01001 and not (atlas_abun[int(Z[symbol == element][0])] == -20.0 and ODF_value > self_value):
                 raise ValueError('Incomplatible ODF: ODF calculated for enhancements {} as opposed to {}'.format(dict(ODF['abun']), dict(self.abun)))
 
     def mass_fractions(self):
