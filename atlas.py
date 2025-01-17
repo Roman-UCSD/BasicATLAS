@@ -1343,8 +1343,6 @@ def synphot(run_dir, mag_system, reddening = 0.0, Rv = 3.1, filters_dir = python
                     wl_max = 320000
                     mask = (wl > wl_min) & (wl < wl_max)
                     result[mask] = extmod(np.array(wl)[mask]  * u.Angstrom) * E * Rv
-                    if not np.all(mask):
-                        notify('The wavelength range of the spectrum ({}:{}) exceeds the domain of the extinction law ({}:{})'.format(np.min(wl), np.max(wl), wl_min, wl_max))
                     return result
                 A = extinction_law(spectrum['wl'])
             else:
