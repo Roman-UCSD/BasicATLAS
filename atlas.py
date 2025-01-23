@@ -313,11 +313,11 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 450, ODF 
     # atlas_converged() will extract the best iteration and print its convergence parameters
     atlas_converged(output_dir, True, silent, niter)
 
-    validate_run(output_dir, silent = silent)
-
     cmd('bash {}/atlas_control_end.com'.format(output_dir))
     if not (os.path.isfile(cards['output_1']) and os.path.isfile(cards['output_2'])):
         raise ValueError("ATLAS-9 did not output expected files")
+
+    validate_run(output_dir, silent = silent)
 
     # ATLAS carries out all frequency integrations over a fixed range of wavelengths that may not be large enough to accommodate
     # very high temperatures (>200 kK). Here we check if the frequency range is appropriate for the entire temperature run of the model
@@ -434,7 +434,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust 
 
     # Check that the ATLAS-9 run exists
     output_dir = os.path.realpath(output_dir)
-    if not (os.path.isfile(output_dir + '/output_main.out') and os.path.isfile(output_dir + '/output_summary.out')):
+    if not (os.path.isfile(output_dir + '/output_last_iteration.out') and os.path.isfile(output_dir + '/output_summary.out')):
         raise ValueError('ATLAS run output not found in {}'.format(output_dir))
 
     # Check that SYNTHE has not already ran
@@ -494,6 +494,11 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust 
         f.close()
         notify("Updated abundances in output_synthe.out for spectral synthesis", silent)
 
+    # Make sure the requested atomic line list exists
+    linelist = os.path.realpath(python_path + '/data/synthe_files/{}.dat'.format(linelist))
+    if not os.path.isfile(linelist):
+        raise ValueError('Linelist {} not found'.format(linelist))
+
     synthe_num = 0            # Batch number
     completed = False         # The last batch sets this flag to True
     current_min_wl = min_wl   # Start wavelength of the current batch
@@ -513,14 +518,9 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust 
         if type(C12C13) is not bool:
             C13 = 1 / (C12C13 + 1)
             C12 = 1 - C13
-            C12C13 = 'echo "{} {}" > c12c13.dat'.format(np.log10(C12), np.log10(C13))
+            C12C13_line = 'echo "{} {}" > c12c13.dat'.format(np.log10(C12), np.log10(C13))
         else:
-            C12C13 = 'rm -f c12c13.dat'
-
-        # Make sure the requested atomic line list exists
-        linelist = os.path.realpath(python_path + '/data/synthe_files/{}.dat'.format(linelist))
-        if not os.path.isfile(linelist):
-            raise ValueError('Linelist {} not found'.format(linelist))
+            C12C13_line = 'rm -f c12c13.dat'
 
         # Generate a launcher command file
         cards = {
@@ -540,7 +540,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust 
           'synthe_solar': output_dir + '/output_synthe.out',
           'output_dir': output_dir,
           'synthe_num': synthe_num,
-          'C12C13': C12C13,
+          'C12C13': C12C13_line,
           'linelist': linelist,
         }
         file = open(output_dir + '/synthe_launch.com', 'w')
@@ -712,7 +712,7 @@ def meta(run_dir):
         raise ValueError('Run directory {} not found!'.format(run_dir))
     if os.path.isfile(run_dir + '/xnfdf.out'):
         return meta_dfsynthe(run_dir)
-    elif os.path.isfile(run_dir + '/output_main.out'):
+    elif os.path.isfile(run_dir + '/output_summary.out'):
         return meta_atlas(run_dir)
     else:
         raise ValueError('Run {} type unknown!'.format(run_dir))
@@ -757,11 +757,11 @@ def meta_atlas(run_dir):
                                  across layers
             medium       :       Whether the output wavelengths are quoted in vacuum or air
     """
-    elements_received, params_received = parse_atlas_abundances(run_dir + '/output_main.out', classic_style = False, lookbehind = 2, params = ['0XSCALE', 'TEFF', 'LOG G'])
-    output = Settings().abun_atlas_to_std(elements_received, np.log10(params_received['0XSCALE']))
+    elements_received, params_received = parse_atlas_abundances(run_dir + '/output_summary.out', classic_style = True, lookbehind = 4, params = ['ABUNDANCE SCALE', 'TEFF', 'GRAVITY'])
+    output = Settings().abun_atlas_to_std(elements_received, np.log10(params_received['ABUNDANCE SCALE']))
     output['teff'] = params_received['TEFF']
-    output['logg'] = params_received['LOG G']
-    vturb = validate_run(run_dir, return_received_vturb = True)
+    output['logg'] = params_received['GRAVITY']
+    vturb = read_structure(run_dir)[0]['turbulent_velocity'][0]
     output['vturb'] = vturb * 1e-5
     output['type'] = 'ATLAS'
 
@@ -856,6 +856,8 @@ def parse_atlas_abundances(file, classic_style = True, lookahead = 0, lookbehind
             start = content[:start].rfind('\n')
         for i in range(lookahead):
             end += content[end:].find('\n') + 1
+        if start == -1:
+            start = 0
         listing = content[start:end]
 
         output_params = {}
@@ -875,7 +877,7 @@ def parse_atlas_abundances(file, classic_style = True, lookahead = 0, lookbehind
 
     return elements
 
-def validate_run(run_dir, return_received_vturb = False, return_received_synthe = False, silent = False):
+def validate_run(run_dir, return_received_synthe = False, silent = False):
     """
     Confirm that the input values provided to ATLAS/SYNTHE/DFSYNTHE in a given run match the ATLAS/SYNTHE/DFSYNHTE's
     interpretation of them. Due to the explicit formatting requirements, sometimes this is not the case. The run
@@ -884,8 +886,6 @@ def validate_run(run_dir, return_received_vturb = False, return_received_synthe 
 
     arguments:
         run_dir                  :           Directory with output of the run requiring validation
-        return_received_vturb    :           If the run is an ATLAS run, abort validation and return the value of
-                                             VTURB received by ATLAS
         return_received_synthe   :           If the run is a SYNTHE run, abort validation and return the values of
                                              all parameters received by SYNTHE as a dictionary
         silent                   :           Do not print status messages (none will be printed regardless if
@@ -900,17 +900,9 @@ def validate_run(run_dir, return_received_vturb = False, return_received_synthe 
         elements_received, params_received = parse_atlas_abundances(run_dir + '/output_main.out', classic_style = False, lookbehind = 2, params = ['0XSCALE', 'TEFF', 'LOG G'])
 
         # Determine the received value of VTURB
-        f = open(run_dir + '/output_main.out', 'r')
-        content = f.read()
-        f.close()
-        start = content.find('RHOX         T        P        XNE')
-        start = content[start:].find('\n') + start
-        end = start
-        for i in range(2):
-            end += content[end:].find('\n') + 1
-        vturb_received = float(np.loadtxt([content[start:end].strip().replace('E-', 'E=').replace('-', ' -').replace('E=', 'E-')], dtype = str)[7])
-        if return_received_vturb:
-            return vturb_received
+        vturb_received = read_structure(run_dir)[0]['turbulent_velocity']
+        assert np.all(vturb_received[0] == vturb_received)
+        vturb_received = vturb_received[0]
 
         # Check for matches and raise exceptions
         for i in range(len(elements_requested)):
