@@ -5,7 +5,7 @@ python_path = os.path.dirname(os.path.realpath(__file__))
 
 
 # Check these files for presence
-no_hash = ['bin/atlas9mem.exe', 'bin/dfsortp.exe', 'bin/dfsynthe.exe', 'bin/kappa9.exe', 'bin/kapreadts.exe', 'bin/separatedf.exe', 'bin/xnfdf.exe', 'bin/rgfalllinesnew.exe', 'bin/rmolecasc.exe', 'bin/rschwenk.exe',
+no_hash = ['bin/atlas9mem.exe', 'bin/dfsortp.exe', 'bin/dfsynthe.exe', 'bin/kappa9.exe', 'bin/kapreadts.exe', 'bin/separatedf.exe', 'bin/xnfdf.exe', 'bin/rgfalllinesnew.exe', 'bin/rmolecasc.exe',
            'bin/spectrv.exe', 'bin/synthe.exe', 'bin/xnfpelsyn.exe', 'bin/converfsynnmtoa.exe', 'bin/rh2ofast.exe', 'bin/rpredict.exe', 'bin/synbeg.exe']
 
 # Check these files for MD5 hashes
@@ -32,10 +32,9 @@ hash = {
     'data/synthe_files/coax.asc': '92c558cc9b23ee96dcc0e0179730faeb',
     'data/synthe_files/continua.dat': '9e317b10bd777bf997e027543aed00ac',
     'data/synthe_files/coxx.asc': '778d9fe8001ba91211ac1209702b236b',
-    'data/synthe_files/eschwenke.bin': 'f918590e36fc49425581e5c9147911b7',
     'data/synthe_files/gfall08oct17.dat': '32e655430d5a7ce36f556bd545167971',
     'data/synthe_files/h2.asc': '527b750951c035b5978dba1b5de38215',
-    'data/synthe_files/h2ofastfix.bin': 'd62e69d234182e6281f249c0ae555ce4',
+    'data/dfsynthe_files/h2ofastfix.bin': 'd62e69d234182e6281f249c0ae555ce4',
     'data/synthe_files/h2xx.asc': 'ae63f1d809523ac0c92bde48280dd2ba',
     'data/synthe_files/hdxx.asc': '8a741ea1a118d7154165fded06a1d9c0',
     'data/synthe_files/he1tables.dat': '3e1aa7dd7c0f420d12f3d5d88c342342',
@@ -46,7 +45,7 @@ hash = {
     'data/synthe_files/sioax.asc': '7e8de7d2eaa68c78a164d89556590119',
     'data/synthe_files/sioex.asc': '8a53e55a001cba30896a37bc07c0869d',
     'data/synthe_files/sioxx.asc': '4671eb6faecd1b320847458c54b9647c',
-    'data/synthe_files/tioschwenke.bin': 'bd1bebfc340d9955b2747e043c4e6206',
+    'data/synthe_files/tiototo.asc': 'c5234dd67feca8ad54431514c390c52d',
 }
 
 

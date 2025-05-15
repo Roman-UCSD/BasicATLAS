@@ -51,9 +51,7 @@ wget -nc -nv -O data/synthe_files/coxx.asc http://kurucz.harvard.edu/linelists/l
 wget -nc -nv -O data/synthe_files/sioax.asc http://kurucz.harvard.edu/linelists/linesmol/sioax.asc
 wget -nc -nv -O data/synthe_files/sioex.asc http://kurucz.harvard.edu/linelists/linesmol/sioex.asc
 wget -nc -nv -O data/synthe_files/sioxx.asc http://kurucz.harvard.edu/linelists/linesmol/sioxx.asc
-wget -nc -nv -O data/synthe_files/tioschwenke.bin http://kurucz.harvard.edu/molecules/tio/tioschwenke.bin
-wget -nc -nv -O data/synthe_files/h2ofastfix.bin http://kurucz.harvard.edu/molecules/h2o/h2ofastfix.bin
-wget -nc -nv -O data/synthe_files/eschwenke.bin http://wwwuser.oats.inaf.it/castelli/linelists/eschwenke.bin
+wget -nc -nv -O data/synthe_files/tiototo.asc http://kurucz.harvard.edu/molecules/tio/tiototo.asc
 
 wget -nc -nv -O data/synthe_files/gfall08oct17.dat http://kurucz.harvard.edu/linelists/gfnew/gfall08oct17.dat
 
@@ -68,7 +66,6 @@ wget -nc -nv -O src/synbeg.for http://wwwuser.oats.inaf.it/castelli/sources/synt
 wget -nc -nv -O src/rgfalllinesnew.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/rgfalllinesnew.for
 wget -nc -nv -O src/rpredict.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/rpredict.for
 wget -nc -nv -O src/rmolecasc.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/rmolecasc.for
-wget -nc -nv -O src/rschwenk.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/rschwenk.for
 wget -nc -nv -O src/rh2ofast.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/rh2ofast.for
 wget -nc -nv -O src/synthe.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/synthe.for
 wget -nc -nv -O src/spectrv.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/spectrv.for

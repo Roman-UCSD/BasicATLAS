@@ -37,7 +37,7 @@ generally require them.
 MOLECULAR LINES
 
 Molecular lines in BasicATLAS are imported according to Fiorella Castelli's tutorial (https://wwwuser.oats.inaf.it/fiorella.castelli/sources/synthe/examples/synthep.html)
-with two exceptions:
+with three exceptions:
 
 1. chmasseron.asc
     The CH line list distributed by Robert Kurucz (http://kurucz.harvard.edu/molecules/ch/chmasseron.asc) appears to be faulty as it contains numerous strong
@@ -48,3 +48,15 @@ with two exceptions:
     The MgH line list distributed by Robert Kurucz (http://kurucz.harvard.edu/linelists/linesmol/mgh.asc) is replaced in BasicATLAS with the ExoMol line list
     mgh_exomol.asc, built from Owens+2022 (https://www.exomol.com/data/molecules/MgH/24Mg-1H/XAB/ and equivalents for isotopes)
 
+3. tiototo.asc
+    The TiO line list compiled by Schwenke+1998 and distributed by Robert Kurucz (http://kurucz.harvard.edu/molecules/tio/tioschwenke.bin) is outdated with multiple
+    more recent alternatives available. In BasicATLAS, this list is replaced with the ExoMol/Toto database (McKemmish+2019), which was also downloaded from the Kurucz
+    website (http://kurucz.harvard.edu/molecules/tio/tiototo.asc). Even though the Kurucz version of the Toto list is much shorter than the original (the weakest lines
+    have been excluded), it is still much larger than the Schwenke list and incurs a large computational penalty. In low- and medium-resolution spectroscopy, the list
+    can be reduced even further to ragain some of the original performance. We provide a helper script, reduce_tio.py, which may be used to remove the weakest lines
+    from the TiO list up to a given oscillator strength (log(gf)). We found that removing all lines with log(gf)<-3 is typically acceptable. Note that once the list has
+    been shortened, it will be considered corrupted by test.py
+
+NOTES: The replaced molecular line lists are imported with RMOLECASC, which provides default damping constants depending on whether the transition is roto-vibrational or
+electronic. The nature of each transition is inferred from the energy level labels in the line list. Some of the replaced line lists do not have level labels, and all
+transitions are interpreted as electronic. This omission however appears to have a negligibly small effect on the synthesized spectrum.

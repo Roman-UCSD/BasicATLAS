@@ -462,7 +462,6 @@ gfortran -fno-automatic -w -O3 -o bin/synbeg.exe src/synbeg.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rgfalllinesnew.exe src/rgfalllinesnew.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rpredict.exe src/rpredict.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rmolecasc.exe src/rmolecasc.patched.for -std=legacy
-gfortran -fno-automatic -w -O3 -o bin/rschwenk.exe src/rschwenk.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rh2ofast.exe src/rh2ofast.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/synthe.exe src/synthe.patched.for -std=legacy
 gfortran -fno-automatic -w -O3 -c src/spectrv.for -std=legacy

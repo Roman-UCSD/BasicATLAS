@@ -445,14 +445,12 @@ ln -s {s_files}/sioxx.asc fort.11
 rm fort.11
 
 # Import TiO lines
-ln -s {s_files}/tioschwenke.bin fort.11
-ln -s {s_files}/eschwenke.bin fort.48
-{synthe_suite}/rschwenk.exe>rschwenk.out
+ln -s {s_files}/tiototo.asc fort.11
+{synthe_suite}/rmolecasc.exe>tio.out
 rm fort.11
-rm fort.48
 
 # Import H2O lines
-ln -s {s_files}/h2ofastfix.bin fort.11
+ln -s {d_files}/h2ofastfix.bin fort.11
 {synthe_suite}/rh2ofast.exe>h2ofastfix.out
 rm fort.11
 
