@@ -8,6 +8,7 @@ import time
 from scipy.optimize import brentq
 import scipy.constants as spc
 import warnings
+import copy
 
 from settings import Settings
 import templates
@@ -589,7 +590,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust 
     notify("Finished running SYNTHE in " + str(datetime.now() - startTime) + " s", silent)
 
 
-def dfsynthe(output_dir, settings, silent = False):
+def dfsynthe(output_dir, settings, parallel = False, silent = False):
     """
     Run DFSYNTHE and KAPPAROS to calculate Opacity Distribution Functions (ODFs) and Rosseland mean opacities for a given
     set of chemical abundances
@@ -598,6 +599,7 @@ def dfsynthe(output_dir, settings, silent = False):
     arguments:
         output_dir     :     Directory to store the output. Must NOT exist
         settings       :     Object of class Settings() with required chemical abundances
+        parallel       :     If True, run DFSYNTHE for all temperatures in parallel using concurrent.futures
         silent         :     Do not print status messages
     """
     startTime = datetime.now()
@@ -647,24 +649,28 @@ def dfsynthe(output_dir, settings, silent = False):
     notify('XNFDF halted', silent)
     
     # Run DFSYNTHE
-    file = open(output_dir + '/dfp_start.com', 'w')
-    file.write(templates.dfsynthe_control_start.format(**cards))
-    file.close()
-    file = open(output_dir + '/dfp_end.com', 'w')
-    file.write(templates.dfsynthe_control_end.format(**cards))
-    file.close()
     notify('Will run DFSYNTHE to tabulate the ODFs (Opacity Distribution Functions)', silent)
-    cmd('bash {}/dfp_start.com'.format(output_dir))
-    for i, dft in enumerate(dfts):
-        cards['dft'] = str(int(float(dft)))
-        cards['dfsynthe_control_cards'] = '0' * i + '1' + '0' * (len(dfts) - 1 - i)
-        file = open(output_dir + '/dfp.com', 'w')
-        file.write(templates.dfsynthe_control.format(**cards))
+    def process_dft(i):
+        dft_cards = copy.deepcopy(cards)
+        dft_cards['dft'] = str(int(float(dfts[i])))
+        dft_cards['dfsynthe_control_cards'] = '0' * i + '1' + '0' * (len(dfts) - 1 - i)
+        dft_cards['output_dir'] = '{}/dft_{}/'.format(output_dir, i)
+        os.mkdir(dft_cards['output_dir'])
+        file = open(filename := (output_dir + '/dft_{}/dfp.com'.format(i)), 'w')
+        file.write(templates.dfsynthe_control_start.format(**dft_cards))
+        file.write(templates.dfsynthe_control.format(**dft_cards))
+        file.write(templates.dfsynthe_control_end.format(**dft_cards))
         file.close()
-        cmd('bash {}/dfp.com'.format(output_dir))
-        notify(str(float(dft)) + ' K done! (' + str(i+1) + '/' + str(len(dfts)) + ')', silent)
-    cmd('bash {}/dfp_end.com'.format(output_dir))
-    
+        cmd('bash {}'.format(filename))
+        notify(str(float(dfts[i])) + ' K done! (' + str(i+1) + '/' + str(len(dfts)) + ')', silent)
+    if parallel:
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = executor.map(process_dft, range(len(dfts)))
+    else:
+        for i in range(len(dfts)):
+            process_dft(i)
+
     # Run SEPARATEDF
     notify('Will run SEPARATEDF to merge the output in a single file for every standard turbulent velocity (0, 1, 2, 4 and 8 km/s)', silent)
     for j, v in enumerate(vs):

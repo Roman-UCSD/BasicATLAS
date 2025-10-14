@@ -199,6 +199,8 @@ mv kapk8.dat fort.15
 {dfsynthe_suite}/kapreadts.exe
 mv fort.2 kappa.ros
 rm fort.*
+rm -r dft_*
+rm *.bin
 """
 
 xnfdf_control_start = """cd {output_dir}
@@ -274,8 +276,8 @@ BEGIN
 
 dfsynthe_control_start = """
 cd {output_dir}
-ln -s ./xnfpdf.dat fort.10
-ln -s ./xnfpdfmax.dat fort.22
+ln -s ../xnfpdf.dat fort.10
+ln -s ../xnfpdfmax.dat fort.22
 ln -s {d_data}/lowlinesdf.bin fort.11
 ln -s {d_data}/highlinesdf.bin fort.21
 ln -s {d_data}/diatomicsdf.bin fort.31
@@ -309,28 +311,28 @@ mv fort.20 dfp00t{dft}vt8.bin
 
 mv dfp00t{dft}vt0.bin fort.1
 {dfsynthe_suite}/dfsortp.exe>dfsortp.out
-mv fort.2 dfp00t{dft}vt0sortp.asc
-mv fort.1 dfp00t{dft}vt0.bin
+mv fort.2 ../dfp00t{dft}vt0sortp.asc
+mv fort.1 ../dfp00t{dft}vt0.bin
 
 mv dfp00t{dft}vt1.bin fort.1
 {dfsynthe_suite}/dfsortp.exe>dfsortp.out
-mv fort.2 dfp00t{dft}vt1sortp.asc
-mv fort.1 dfp00t{dft}vt1.bin
+mv fort.2 ../dfp00t{dft}vt1sortp.asc
+mv fort.1 ../dfp00t{dft}vt1.bin
 
 mv dfp00t{dft}vt2.bin fort.1
 {dfsynthe_suite}/dfsortp.exe>dfsortp.out
-mv fort.2 dfp00t{dft}vt2sortp.asc
-mv fort.1 dfp00t{dft}vt2.bin
+mv fort.2 ../dfp00t{dft}vt2sortp.asc
+mv fort.1 ../dfp00t{dft}vt2.bin
 
 mv dfp00t{dft}vt4.bin fort.1
 {dfsynthe_suite}/dfsortp.exe>dfsortp.out
-mv fort.2 dfp00t{dft}vt4sortp.asc
-mv fort.1 dfp00t{dft}vt4.bin
+mv fort.2 ../dfp00t{dft}vt4sortp.asc
+mv fort.1 ../dfp00t{dft}vt4.bin
 
 mv dfp00t{dft}vt8.bin fort.1
 {dfsynthe_suite}/dfsortp.exe>dfsortp.out
-mv fort.2 dfp00t{dft}vt8sortp.asc
-mv fort.1 dfp00t{dft}vt8.bin
+mv fort.2 ../dfp00t{dft}vt8sortp.asc
+mv fort.1 ../dfp00t{dft}vt8.bin
 """
 
 separatedf_control = """mv {output_dir}/dfp00t{dft}vt{v}sortp.asc {output_dir}/fort.{serial}
