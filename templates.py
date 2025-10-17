@@ -32,7 +32,8 @@ atlas_control_start = """
 cd {output_dir}
 ln -s odf_1.ros fort.1
 ln -s odf_9.bdf fort.9
-ln -s {molecules} fort.2
+cp {molecules} fort.2
+sed -i 's/822.00  6.87/822.00  {tio}/g' fort.2
 ln -s {initial_model} fort.3 
 """
 
@@ -79,6 +80,7 @@ EOF
 kappa9_control = """
 cd {output_dir}
 cp {d_data}/molecules.dat fort.2
+sed -i 's/822.00  6.87/822.00  {tio}/g' fort.2
 mv ./p00big{v}.bdf fort.9
 {dfsynthe_suite}/kappa9.exe<<EOF>kapm40k2.out
 MOLECULES ON
@@ -205,6 +207,7 @@ rm *.bin
 
 xnfdf_control_start = """cd {output_dir}
 cp {d_data}/molecules.dat fort.2
+sed -i 's/822.00  6.87/822.00  {tio}/g' fort.2
 cp {d_data}/pfiron.dat fort.4
 cp {d_data}/continua.dat fort.17
 {dfsynthe_suite}/xnfdf.exe<<EOF>xnfdf.out
@@ -362,7 +365,8 @@ MOLECULES ON
 synthe_control = """cd {output_dir}
 mkdir -p synthe_{synthe_num}
 cd synthe_{synthe_num}/
-ln -s {s_files}/molecules.dat fort.2
+cp {s_files}/molecules.dat fort.2
+sed -i 's/822.00  6.87/822.00  {tio}/g' fort.2
 ln -s {s_files}/continua.dat fort.17
 
 # xnfpelsyn.exe computes the chemical equilibrium
@@ -462,7 +466,8 @@ ln -s {s_files}/he1tables.dat fort.18
 {synthe_suite}/synthe.exe>synthe.out
 
 # spectrv.exe computes the synthetic spectrum
-ln -s {s_files}/molecules.dat fort.2
+cp {s_files}/molecules.dat fort.2
+sed -i 's/822.00  6.87/822.00  {tio}/g' fort.2
 cat <<"EOF" >fort.25
 0.0       0.        1.        0.        0.        0.        0.        0.
 0.

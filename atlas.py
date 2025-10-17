@@ -227,7 +227,7 @@ def atlas_converged(run_dir, print_result = False, silent = False, niter = 0):
 
     return err, de
 
-def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 450, ODF = python_path + '/data/solar_ODF', molecules = True, silent = False):
+def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 450, ODF = python_path + '/data/solar_ODF', molecules = True, silent = False, tio = 6.87):
     """
     Run ATLAS-9 to calculate a model stellar atmosphere
 
@@ -286,7 +286,8 @@ def atlas(output_dir, settings = Settings(), restart = 'auto', niter = 450, ODF 
       'gravity': settings.logg,
       'vturb': str(int(settings.vturb)),
       'output_dir': output_dir,
-      'enable_molecules': ['OFF', 'ON'][molecules]
+      'enable_molecules': ['OFF', 'ON'][molecules],
+      'tio': tio,
     }
     for z, abundance in enumerate(settings.atlas_abun()):
         cards['element_' + str(z)] = abundance
@@ -396,7 +397,7 @@ def synbeg(min_wl, max_wl, res):
         wllast = np.e ** (ixwlend * ratiolg)
     return int(ixwlend - ixwlbeg + 1)
 
-def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust = {}, C12C13 = False, linelist = 'BasicATLAS', buffsize = 2010001, overwrite_prev = False, air_wl = False, silent = False, progress = True):
+def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust = {}, C12C13 = False, linelist = 'BasicATLAS', buffsize = 2010001, overwrite_prev = False, air_wl = False, silent = False, progress = True, tio = 6.87):
     """
     Run SYNTHE to calculate the emergent spectrum corresponding to an existing ATLAS model
 
@@ -543,6 +544,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust 
           'synthe_num': synthe_num,
           'C12C13': C12C13_line,
           'linelist': linelist,
+          'tio': tio,
         }
         file = open(output_dir + '/synthe_launch.com', 'w')
         file.write(templates.synthe_control.format(**cards))
@@ -590,7 +592,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust 
     notify("Finished running SYNTHE in " + str(datetime.now() - startTime) + " s", silent)
 
 
-def dfsynthe(output_dir, settings, parallel = False, silent = False):
+def dfsynthe(output_dir, settings, parallel = False, silent = False, tio = 6.87):
     """
     Run DFSYNTHE and KAPPAROS to calculate Opacity Distribution Functions (ODFs) and Rosseland mean opacities for a given
     set of chemical abundances
@@ -626,6 +628,7 @@ def dfsynthe(output_dir, settings, parallel = False, silent = False):
       'abundance_scale': 10 ** settings.zscale,
       'dfsynthe_suite': python_path + '/bin/',
       'output_dir': output_dir,
+      'tio': tio,
     }
     for z, abundance in enumerate(settings.atlas_abun()):
         cards['element_' + str(z)] = float(abundance)
