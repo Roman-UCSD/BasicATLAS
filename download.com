@@ -1,3 +1,23 @@
+# Check that the required commands are available
+required=("gzip" "wget")
+for c in "${required[@]}"; do
+    if ! command -v "$c" &>/dev/null; then
+        echo "ERROR: Command ${c} not available"
+        return 1
+    fi
+done
+
+# Prompt the user to download the full grid of restart models
+FILENAME="restarts/light.h5"
+if [[ ! -f "$FILENAME" ]]; then
+    read -p "BasicATLAS is shipped with a reduced grid of restart files. Downloading the full grid is recommended. Would you like to do that? (y/n)" answer
+    if [[ ! "$answer" =~ ^[Nn]$ ]]; then
+        echo "The full grid (light.h5) is available on Google Drive: https://drive.google.com/file/d/1xBhLEdUBZTjtHHg110FVH6G-rYFaPHTk/view?usp=sharing"
+        echo "Download the grid and save it in restarts/light.h5, then re-run this script"
+        return 1
+    fi
+fi
+
 wget -nc -nv -O data/dfsynthe_files/continua.dat  http://kurucz.harvard.edu/programs/newdf/continua.dat
 wget -nc -nv -O data/dfsynthe_files/molecules.dat http://wwwuser.oats.inaf.it/castelli/sources/dfsynthe/molecules.dat
 wget -nc -nv -O data/dfsynthe_files/pfiron.dat http://kurucz.harvard.edu/atoms/pf/pfiron.dat

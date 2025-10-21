@@ -45,7 +45,12 @@ hash = {
     'data/synthe_files/sioax.asc': '7e8de7d2eaa68c78a164d89556590119',
     'data/synthe_files/sioex.asc': '8a53e55a001cba30896a37bc07c0869d',
     'data/synthe_files/sioxx.asc': '4671eb6faecd1b320847458c54b9647c',
-    'data/synthe_files/tiototo.asc': 'c5234dd67feca8ad54431514c390c52d',
+    'data/synthe_files/tiototo.asc': 'dac3f30e3928842e331e6540655be3e6', # This is for the reduced list with all log(gf) < -2.5 lines removed
+}
+
+# Check these files for MD5 hashes only if present
+hash_optional = {
+    'restarts/light.h5': '3b70fbbbc1daef3e82f3a97c81c6e4e5',
 }
 
 
@@ -58,3 +63,8 @@ for file in hash:
         print('File {} is missing'.format(file))
     elif hashlib.md5(open(file,'rb').read()).hexdigest() != hash[file]:
         print('File {} has unexpected hash: {}. Expected {}'.format(file, hashlib.md5(open(file,'rb').read()).hexdigest(), hash[file]))
+
+for file in hash_optional:
+    if os.path.isfile(python_path + '/' + file):
+        if hashlib.md5(open(file,'rb').read()).hexdigest() != hash_optional[file]:
+            print('File {} has unexpected hash: {}. Expected {}'.format(file, hashlib.md5(open(file,'rb').read()).hexdigest(), hash_optional[file]))

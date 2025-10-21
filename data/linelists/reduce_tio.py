@@ -1,10 +1,10 @@
-import os
+import os, sys
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 
-print('Remove weak lines from the TiO Toto molecular line list')
-min_gf = float(input('Minimum log(gf) to keep: '))
-print('Working on it...')
+min_gf = float(sys.argv[1])
+
+print('Removing weak lines from the TiO Toto molecular line list with log(gf) < {}'.format(min_gf))
 
 total = 0
 kept = 0

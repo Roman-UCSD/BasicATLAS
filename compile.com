@@ -1,3 +1,15 @@
+# Check that the required commands are available
+required=("ifort" "gfortran" "patch" "python")
+for c in "${required[@]}"; do
+    if ! command -v "$c" &>/dev/null; then
+        echo "ERROR: Command ${c} not available"
+        return 1
+    fi
+done
+
+# Remove weak lines from the TiO linelist
+python data/linelists/reduce_tio.py -2.5
+
 # Compile DFSYNTHE and satellite packages
 ifort -o bin/xnfdf.exe src/xnfdf.for -save
 ifort -o bin/dfsynthe.exe src/dfsynthe.for -save
