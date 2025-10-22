@@ -74,7 +74,6 @@ The test is clean if no output is produced.
 * [Constructing the simplest model with solar parameters](https://github.com/Roman-UCSD/BasicATLAS/blob/master/examples/sun_model.ipynb)
 * [Interpreting the detailed output of ATLAS and SYNTHE](https://github.com/Roman-UCSD/BasicATLAS/blob/master/examples/output.ipynb)
 * [Calculating opacity distribution functions and using them for non-solar abundances](https://github.com/Roman-UCSD/BasicATLAS/blob/master/examples/custom_abun.ipynb)
-* [Managing restart files to improve model convergence](https://github.com/Roman-UCSD/BasicATLAS/blob/master/examples/restarts.ipynb)
 * [Advanced features and settings](https://github.com/Roman-UCSD/BasicATLAS/blob/master/examples/advanced.md)
 
 ## MacOS Installation
