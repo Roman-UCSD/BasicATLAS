@@ -466,6 +466,56 @@ patch -o src/synthe.patched.for src/synthe.for << EOF
  C
 EOF
 
+# Patch SPECTRV to allow masks
+patch -o src/spectrv.patched.for src/spectrv.for << EOF
+@@ -47,6 +47,12 @@
+       COMMON /PUT/PUT,IPUT
+       COMMON /PZERO/PZERO,PCON,PRADK0,PTURB0,KNU(kw),PRADK(kw),EDENS(kw)
+       REAL*8 KNU
++      INTEGER NUMPTS
++      PARAMETER (NUMPTS=2010001)
++      LOGICAL KEEP(NUMPTS)
++      INTEGER*1 MASKBYTE(NUMPTS)
++      INTEGER NBYTES
++      LOGICAL EXISTS
+       COMMON /RAD/ACCRAD(kw),PRAD(kw)
+       COMMON /RHOX/RHOX(kw),NRHOX
+       COMMON /STATE/P(kw),XNE(kw),XNATOM(kw),RHO(kw),PTOTAL(kw)
+@@ -252,6 +258,24 @@
+       NMU2=NMU*2
+ C     IF(PRDDOP.GT.0.)CALL PRDJNU(RHOXJ)
+       IEDGE=1
++
++C Load the mask
++      NBYTES = NUHI - NULO + 1
++      INQUIRE(FILE='mask.bin', EXIST=EXISTS)
++      IF (EXISTS) THEN
++      OPEN(UNIT=99, FILE='mask.bin', STATUS='OLD', ACCESS='STREAM',
++     &     FORM='UNFORMATTED', ACTION='READ')
++      READ(99) MASKBYTE(1:NBYTES)
++      CLOSE(99)
++      DO NU = 1, NBYTES
++         KEEP(NU) = (MASKBYTE(NU) .NE. 0)
++      END DO
++      ELSE
++      DO NU = 1, NBYTES
++            KEEP(NU) = .TRUE.
++         END DO
++      END IF
++
+       DO 25 NU=NULO,NUHI
+ C     NUPRD=NU
+       WAVE=WBEGIN*RATIO**(NU-1)
+@@ -291,6 +315,7 @@
+       IF(NU.EQ.1)WRITE(6,33)
+    33 FORMAT(1H1)
+       READ(9)ASYNTH
++      IF (.NOT. KEEP(NU) .AND. NU.GT.1) CYCLE
+       DO 241 J=1,NRHOX
+ C      ALINE(J)=AHLINE(J)+ASYNTH(J)*(1.-FSCAT(J))+AXLINE(J)
+       ALINE(J)=ASYNTH(J)*(1.-FSCAT(J))
+EOF
+
 # Compile SYNTHE
 gfortran -fno-automatic -w -O3 -c src/xnfpelsyn.for -std=legacy
 gfortran -fno-automatic -w -O3 -c src/atlas7v.for -std=legacy
@@ -476,7 +526,7 @@ gfortran -fno-automatic -w -O3 -o bin/rpredict.exe src/rpredict.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rmolecasc.exe src/rmolecasc.patched.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/rh2ofast.exe src/rh2ofast.for -std=legacy
 gfortran -fno-automatic -w -O3 -o bin/synthe.exe src/synthe.patched.for -std=legacy
-gfortran -fno-automatic -w -O3 -c src/spectrv.for -std=legacy
-gfortran spectrv.o atlas7v.o -o bin/spectrv.exe -std=legacy
-gfortran -fno-automatic -w -O3 -o bin/converfsynnmtoa.exe src/converfsynnmtoa.for -std=legacy
-rm atlas7v.o spectrv.o xnfpelsyn.o
+gfortran -fno-automatic -w -O3 -c src/spectrv.patched.for -std=legacy
+gfortran spectrv.patched.o atlas7v.o -o bin/spectrv.exe -std=legacy
+rm atlas7v.o spectrv.patched.o xnfpelsyn.o
+

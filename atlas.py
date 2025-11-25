@@ -572,23 +572,51 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust 
             pbar.close()
             if thread.exception is not None:
                 raise thread.exception
-        if not (os.path.isfile(output_dir + '/synthe_{}/spectrum.asc'.format(cards['synthe_num']))):
+        if not (os.path.isfile(output_dir + '/synthe_{}/spectrum.bin'.format(cards['synthe_num']))):
             raise ValueError("SYNTHE did not output expected files")
         notify("SYNTHE halted", silent)
         validate_run(output_dir, silent = silent)
 
         current_min_wl = current_max_wl
 
-    # Merge all output files and save the data as ASCII file
-    data = np.empty([4, 0])
-    for i in range(1, synthe_num + 1):
-        data = np.append(data, np.loadtxt(output_dir + '/synthe_{}/spectrum.asc'.format(i), unpack = True, skiprows = 2), axis = 1)
-    notify("Total data points: " + str(len(data[0])), silent)
-    np.savetxt(output_dir + '/spectrum.dat', data.T, delimiter = ',', header = 'Wavelength [A],Line intensity [erg s^-1 cm^-2 A^-1 strad^-1],Continuum intensity [erg s^-1 cm^-2 A^-1 strad^-1],Intensity ratio')
-    notify("Saved the spectrum in spectrum.dat", silent)
-
     notify("Finished running SYNTHE in " + str(datetime.now() - startTime) + " s", silent)
 
+def load_binary_spectrum(filename, mask = False):
+    """
+    Load the binary spectrum output of the SYNTHE suite into NumPy arrays
+
+    arguments:
+        filename       :     Path to the binary spectrum file, spectrum.bin
+        mask           :     If the spectrum was calculated with a mask (i.e. if certain wavelength points)
+                             were skipped, that mask must be provided here
+
+    returns:
+        wl             :     Wavelength array in A
+        flux           :     Flux (strictly speaking, intensity) array in CGS/A
+        cont           :     Continuum array in CGS/A
+        ratio          :     Continuum-normalized flux array
+    """
+    f = open(filename, 'rb')
+    dt = np.dtype('i4,f8,f8,S74,f8,f8,i4,i4,i4,' + ','.join(['f8'] * 20 + ['i4'] + ['f8'] * 377))
+    header = np.fromfile(f, dtype = dt, count = 1)
+    dt = np.dtype('f8,f8,f8')
+    data = np.fromfile(f, dtype = dt, count = -1)
+    f.close()
+
+    wl = 10 ** (np.log10(header['f4'][0]) + np.arange(header['f6'][0]) * np.log10(1 + 1 / header['f5'][0])) * 10
+    if type(mask) is bool:
+        mask = np.full(len(wl), True)
+    wl = wl[mask]
+
+    # The first pixel of the spectrum cannot be masked out, so if the user wanted it out, we have to remove it here
+    if not mask[0]:
+        flux = 4.0 * data['f1'][1:] * spc.c * 1e10 / (wl ** 2.0)
+        cont = 4.0 * data['f2'][1:] * spc.c * 1e10 / (wl ** 2.0)
+    else:
+        flux = 4.0 * data['f1'] * spc.c * 1e10 / (wl ** 2.0)
+        cont = 4.0 * data['f2'] * spc.c * 1e10 / (wl ** 2.0)
+
+    return wl, flux, cont, flux / cont
 
 def dfsynthe(output_dir, settings, parallel = False, silent = False):
     """
@@ -1070,14 +1098,16 @@ def read_spectrum(run_dir, num_bins = -1):
     """
     if not os.path.isdir(run_dir):
         raise ValueError('Run directory {} not found!'.format(run_dir))
-    if not os.path.isfile(spec_filename := (run_dir + '/spectrum.dat')):
-        if not os.path.isfile(spec_filename := (run_dir + '/spectrum.dat.gz')):
-            raise ValueError('Run directory {} does not contain SYNTHE output!'.format(run_dir))
+    if not os.path.isdir(run_dir + '/synthe_1'):
+        raise ValueError('Run directory {} does not contain SYNTHE output!'.format(run_dir))
 
-    structure = {}
-    units = {}
+    data = np.array([[], [], [], []])
+    synthe_num = 1
+    while os.path.isdir(run_dir + '/synthe_{}'.format(synthe_num)):
+        data = np.append(data, load_binary_spectrum(run_dir + '/synthe_{}/spectrum.bin'.format(synthe_num)), axis = 1)
+        synthe_num += 1
 
-    wl, flux, cont, line = np.loadtxt(spec_filename, delimiter = ',', unpack = True)
+    wl, flux, cont, line = data
     if num_bins > 0:
         wl_binned, flux = bin_spec(wl, flux, num_bins = num_bins)
         wl_binned, cont = bin_spec(wl, cont, num_bins = num_bins)

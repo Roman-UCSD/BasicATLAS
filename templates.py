@@ -370,7 +370,7 @@ ln -s {s_files}/continua.dat fort.17
 mv fort.10 xnfpelsyn.dat
 rm fort.*
 
-# synberg.exe initializes the computation
+# synbeg.exe initializes the computation
 {synthe_suite}/synbeg.exe<<"EOF">synbeg.out
 {airorvac:<3s}       {wlbeg:<10.4f}{wlend:<10.4f}{resolu:<9.2f} {turbv:<10.4f}{ifnlte:<3d}{linout:<7d}{cutoff:<10.5f}{ifpred:<5d}{nread:<5d}
 AIRorVAC  WLBEG     WLEND     RESOLU    TURBV  IFNLTE LINOUT CUTOFF        NREAD
@@ -472,16 +472,7 @@ EOF
 
 mv fort.7 spectrum.bin
 rm fort.*
-
-# Finally, converfsynnmtoa.exe converts the output spectrum in binary into a text file
-
-ln -s spectrum.bin fort.1
-{synthe_suite}/converfsynnmtoa.exe > converfsynnmtoa.out
-mv fort.2 spectrum.asc
-
-rm fort.*
 rm xnfpelsyn.dat
-rm spectrum.bin
 """
 
 synthe_cleanup = """cd {output_dir}

@@ -89,7 +89,6 @@ wget -nc -nv -O src/rmolecasc.for http://wwwuser.oats.inaf.it/castelli/sources/s
 wget -nc -nv -O src/rh2ofast.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/rh2ofast.for
 wget -nc -nv -O src/synthe.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/synthe.for
 wget -nc -nv -O src/spectrv.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/spectrv.for
-wget -nc -nv -O src/converfsynnmtoa.for http://wwwuser.oats.inaf.it/castelli/sources/syntheg/converfsynnmtoa.for
 
 
 cp data/linelists/*.gz data/synthe_files/
