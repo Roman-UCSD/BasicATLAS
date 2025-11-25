@@ -1,0 +1,218 @@
+--- /dev/fd/63	2025-11-25 18:05:50.667177691 -0500
++++ /dev/fd/62	2025-11-25 18:05:50.667177691 -0500
+@@ -1,4 +1,7 @@
+-      PROGRAM XNFPELSYN
++      SUBROUTINE XNFPELSYN(out_teff_logg,out_frqedg,out_wledge,
++     &     out_cmedge,out_idmol,out_momass,out_freqset,
++     &     out_structure,out_continall,out_contabs,
++     &     out_contscat,out_xnfpel,out_dopple)
+ c     revised 13jul2015 to allow more molecules, parameter mm
+ c     revised 27may2015  BeO and BO replaced by NaH and KH
+ c     revised 04nov2014  constants given D exponents
+@@ -8,6 +11,22 @@
+       IMPLICIT REAL*8 (A-H,O-Z)
+       PARAMETER (kw=99,mw=139,mm=mw-39)
+       PARAMETER (MAXMOL=200,MAX1=MAXMOL+1,MAXEQ=30,MAXLOC=3*MAXMOL)
++
++      INTEGER IF17LINE
++      REAL*8 out_teff_logg(2)
++      REAL*8 out_frqedg(344)
++      REAL*8 out_wledge(344)
++      REAL*8 out_cmedge(344)
++      REAL*8 out_idmol(100)
++      REAL*8 out_momass(100)
++      REAL*8 out_freqset(1029)
++      REAL*8 out_structure(16,99)
++      REAL*8 out_continall(72,1131)
++      REAL*8 out_contabs(72,1131)
++      REAL*8 out_contscat(72,1131)
++      REAL*8 out_xnfpel(72,139,6)
++      REAL*8 out_dopple(72,139,6)
++
+       COMMON /ABROSS/ABROSS(kw),TAUROS(kw)
+       COMMON /ABTOT/ABTOT(kw),ALPHA(kw)
+       COMMON /BAL/BAL1(kw,9),AAL1(kw),SAL1(kw),XNFPAL(kw,2),BAL2(kw,1)
+@@ -144,6 +163,7 @@
+      B   104.,  107.,  155.,  999.,  999.,  999.,  999.,  999.,  999.,
+      C   999./
+ c      OPEN(UNIT=17,TYPE='OLD',READONLY,SHARED)
++      IF17LINE=0
+    10 CALL READIN(20)
+       IFOP(14)=0
+       IFOP(15)=0
+@@ -160,12 +180,15 @@
+       NUMITS=1
+       NT=NRHOX
+       REWIND 10
+-      WRITE(10)NT,TEFF,GLOG,TITLE
++c      WRITE(10)NT,TEFF,GLOG,TITLE
++      out_teff_logg(1) = TEFF
++      out_teff_logg(2) = GLOG
+       IN=0
++      F17LINE=0
+    11 EDGE=XFREEF(CARD)
+       IF(EDGE.EQ.0.)GO TO 14
+       IN=IN+1
+-      PRINT 15,IN,EDGE
++c      PRINT 15,IN,EDGE
+       IF(ABS(EDGE).LT.1.D6)GO TO 12
+       IF(ABS(EDGE).LT.1.D25)GO TO 13
+ C     WAVENUMBERS MUST BE MULTIPLIED BY 1.E25
+@@ -182,9 +205,9 @@
+    13 FRQEDG(IN)=EDGE
+       WLEDGE(IN)=2.99792458D17/EDGE
+       CMEDGE(IN)=1.D7/WLEDGE(IN)
+-      A(IN)=ABS(WLEDGE(IN))
+- 1111 WRITE(6,15)IN,FRQEDG(IN),WLEDGE(IN),CMEDGE(IN)
+-   15 FORMAT(I5,1PE25.15,0PF20.7,F20.7)
++ 1111 A(IN)=ABS(WLEDGE(IN))
++c 1111 WRITE(6,15)IN,FRQEDG(IN),WLEDGE(IN),CMEDGE(IN)
++c   15 FORMAT(I5,1PE25.15,0PF20.7,F20.7)
+       GO TO 11
+    14 DO 17 LAST=2,IN
+       LAST1=IN-LAST+2
+@@ -204,8 +227,13 @@
+       CMEDGE(I)=SAVE
+    16 CONTINUE
+    17 CONTINUE
+-      WRITE(6,15)(I,FRQEDG(I),WLEDGE(I),CMEDGE(I),I=1,IN)
+-      WRITE(10)IN,(FRQEDG(I),WLEDGE(I),CMEDGE(I),I=1,IN),IDMOL,MOMASS
++c      WRITE(6,15)(I,FRQEDG(I),WLEDGE(I),CMEDGE(I),I=1,IN)
++c      WRITE(10)IN,(FRQEDG(I),WLEDGE(I),CMEDGE(I),I=1,IN),IDMOL,MOMASS
++      OUT_FRQEDG(:)=FRQEDG(:IN)
++      OUT_WLEDGE(:)=WLEDGE(:IN)
++      OUT_CMEDGE(:)=CMEDGE(:IN)
++      OUT_IDMOL(:)=IDMOL(:)
++      OUT_MOMASS(:)=MOMASS(:)
+       NUMNU=0
+       DO 18 I=1,IN-1
+       NUMNU=NUMNU+1
+@@ -214,8 +242,9 @@
+       FREQSET(NUMNU)=2.99792458D17/(ABS(WLEDGE(I))+ABS(WLEDGE(I+1)))*2.
+       NUMNU=NUMNU+1
+    18 FREQSET(NUMNU)=ABS(FRQEDG(I+1))*1.0000001
+-      WRITE(6,15)NUMNU
+-      WRITE(10)NUMNU,(FREQSET(NU),NU=1,NUMNU)
++c      WRITE(6,15)NUMNU
++c      WRITE(10)NUMNU,(FREQSET(NU),NU=1,NUMNU)
++      OUT_FREQSET=FREQSET(:NUMNU)
+       ITEMP=ITEMP+1
+       CALL POPS(1.00D0,12,XNFH)
+       CALL POPS(2.01D0,12,XNFHE)
+@@ -276,20 +305,36 @@
+       WAVE=2.99792458D17/FREQ
+       WAVENO=1.E7/WAVE
+       CALL KAPP(N,NSTEPS,STEPWT)
+-      WRITE(6,15)NU,FREQ,WAVE,WAVENO
++c      WRITE(6,15)NU,FREQ,WAVE,WAVENO
+       DO 129 J=1,NRHOX
+       ABTOT(J)=ACONT(J)+SIGMAC(J)
+       CONTINALL(NU,J)=LOG10(ABTOT(J))
+       CONTABS(NU,J)=LOG10(ACONT(J))
+       CONTSCAT(NU,J)=LOG10(SIGMAC(J))
+   129 ABLOG(J)= LOG10(ABTOT(J))
+-      WRITE(6,105)(ABLOG(J),J=1,NRHOX)
+-  105 FORMAT(1X,20F5.2)
++c      WRITE(6,105)(ABLOG(J),J=1,NRHOX)
++c  105 FORMAT(1X,20F5.2)
+ C      WRITE(10)ABLOG
+   125 CONTINUE
+ C
+-      WRITE(10)T,TKEV,TK,HKT,TLOG,HCKT,P,XNE,XNATOM,RHO,RHOX,VTURB,
+-     1XNFH,XNFHE,XNFH2
++c      WRITE(10)T,TKEV,TK,HKT,TLOG,HCKT,P,XNE,XNATOM,RHO,RHOX,VTURB,
++c     1XNFH,XNFHE,XNFH2
++      OUT_STRUCTURE(1,:NT)=T
++      OUT_STRUCTURE(2,:NT)=TKEV
++      OUT_STRUCTURE(3,:NT)=TK
++      OUT_STRUCTURE(4,:NT)=HKT
++      OUT_STRUCTURE(5,:NT)=TLOG
++      OUT_STRUCTURE(6,:NT)=HCKT
++      OUT_STRUCTURE(7,:NT)=P
++      OUT_STRUCTURE(8,:NT)=XNE
++      OUT_STRUCTURE(9,:NT)=XNATOM
++      OUT_STRUCTURE(10,:NT)=RHO
++      OUT_STRUCTURE(11,:NT)=RHOX
++      OUT_STRUCTURE(12,:NT)=VTURB
++      OUT_STRUCTURE(13,:NT)=XNFH
++      OUT_STRUCTURE(14,:NT)=XNFHE(:NT,1)
++      OUT_STRUCTURE(15,:NT)=XNFHE(:NT,2)
++      OUT_STRUCTURE(16,:NT)=XNFH2
+       DO 30 NELEM=1,99
+       DO 30 ION=1,10
+       DO 30 J=1,NRHOX
+@@ -363,27 +408,33 @@
+       IT=ITEMP
+       IP=J
+ C
+-      WRITE(10)(CONTINALL(NU,J),NU=1,1131)
+-      WRITE(10)(CONTABS(NU,J),NU=1,1131)
+-      WRITE(10)(CONTSCAT(NU,J),NU=1,1131)
+-      WRITE(10)XNFPEL,DOPPLE
+-      WRITE(6,280)J
+-  280 FORMAT(18H0XNFPEL.....DOPPLE,I10)
+-      DO 29 NELEM=1,39
+-   29 WRITE(6,290)NELEM,(XNFPEL(ION,NELEM),ION=1,6),DOPPLE(1,NELEM)
+-  290 FORMAT(I5,1P6E12.4,5X,2E12.4,0PF14.2,I5)
+-      DO 33 NELEM=40,mw
+-      NELEM6=NELEM*6
+-   33 WRITE(6,290)NELEM,(XNFPEL(ION,NELEM),ION=1,6),DOPPLE(1,NELEM),
+-     1DOPPLE(6,NELEM),IDMOL(NELEM-39),NELEM6
+-      WRITE(6,333)T(J),TK(J),HKT(J),TKEV(J),TLOG(J),RHOX(J),P(J),
+-     1XNE(J),RHO(J),XNFH(J),XNFHE(J,1),XNFH2(J)
+-  333 FORMAT(10H0   T     ,1PE12.4,10H    TK    ,E12.4,10H    HKT   ,
+-     1E12.4,10H    TKEV  ,E12.4,10H    TLOG  ,E12.4/10H0   RHOX  ,
+-     2E12.4,10H    P     ,E12.4,10H    XNE   ,E12.4,10H    RHO   ,E12.4/
+-     3 10H0   XNFH  ,E12.4,10H    XNFHE ,E12.4,10H    XNFH2 ,E12.4)
++c      WRITE(10)(CONTINALL(NU,J),NU=1,1131)
++c      WRITE(10)(CONTABS(NU,J),NU=1,1131)
++c      WRITE(10)(CONTSCAT(NU,J),NU=1,1131)
++c      WRITE(10)XNFPEL,DOPPLE
++      OUT_CONTINALL(J,:1131) = CONTINALL(:1131,J)
++      OUT_CONTABS(J,:1131) = CONTABS(:1131,J)
++      OUT_CONTSCAT(J,:1131) = CONTSCAT(:1131,J)
++      DO 1234 NU=1,6
++      OUT_XNFPEL(J,:,NU)=XNFPEL(NU,:)
++ 1234 OUT_DOPPLE(J,:,NU)=DOPPLE(NU,:)
++c      WRITE(6,280)J
++c  280 FORMAT(18H0XNFPEL.....DOPPLE,I10)
++c      DO 29 NELEM=1,39
++c   29 WRITE(6,290)NELEM,(XNFPEL(ION,NELEM),ION=1,6),DOPPLE(1,NELEM)
++c  290 FORMAT(I5,1P6E12.4,5X,2E12.4,0PF14.2,I5)
++c      DO 33 NELEM=40,mw
++c      NELEM6=NELEM*6
++c   33 WRITE(6,290)NELEM,(XNFPEL(ION,NELEM),ION=1,6),DOPPLE(1,NELEM),
++c     1DOPPLE(6,NELEM),IDMOL(NELEM-39),NELEM6
++c      WRITE(6,333)T(J),TK(J),HKT(J),TKEV(J),TLOG(J),RHOX(J),P(J),
++c     1XNE(J),RHO(J),XNFH(J),XNFHE(J,1),XNFH2(J)
++c  333 FORMAT(10H0   T     ,1PE12.4,10H    TK    ,E12.4,10H    HKT   ,
++c     1E12.4,10H    TKEV  ,E12.4,10H    TLOG  ,E12.4/10H0   RHOX  ,
++c     2E12.4,10H    P     ,E12.4,10H    XNE   ,E12.4,10H    RHO   ,E12.4/
++c     3 10H0   XNFH  ,E12.4,10H    XNFHE ,E12.4,10H    XNFH2 ,E12.4)
+   300 CONTINUE
+-      CALL EXIT
++      RETURN
+       END
+       FUNCTION XFREEF(CARD)
+       IMPLICIT REAL*8 (A-H,O-Z)
+@@ -393,14 +444,16 @@
+       MORE=1
+       XFREEF=FREEFF(CARD)
+ c      write(6,66)xfreef,numcol,last
+- 66   format (1x,1pE12.4,2i10)
++c 66   format (1x,1pE12.4,2i10)
+       IF(IFFAIL.EQ.0)RETURN
+       L=LAST-1
+-      READ(17,1)(CARD(I),I=1,L)
+-    1 FORMAT(80A1)
++      IF17LINE=IF17LINE+1
++      CALL loadf17(IF17LINE,CARD)
++c      READ(17,1)(CARD(I),I=1,L)
++c    1 FORMAT(80A1)
+       NUMCOL=1
+       XFREEF=FREEFF(CARD)
+ c      write(6,666)xfreef
+- 666  format(10x,1pE10.3)
++c 666  format(10x,1pE10.3)
+       RETURN
+       END
