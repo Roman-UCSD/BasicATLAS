@@ -96,6 +96,21 @@ def load_f2(filename):
     return content
 
 def load_f18(filename):
+    """Load the helium Stark broadening table (fort.2) from a text file
+    
+    Each line in the file is assumed to follow the 1X,F5.1,F8.2,8F7.3. The output
+    shape is MxN where M is the number of species and N is 10 corresponding to the format above
+    
+    Parameters
+    ----------
+    filename : str
+        Path to the table file
+    
+    Returns
+    -------
+    array_like
+        Single precision array of loaded values
+    """
     def nanfloat(s):
         try:
             return float(s)
