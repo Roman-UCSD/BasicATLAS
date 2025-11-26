@@ -28,7 +28,7 @@ for filename in required:
         raise ValueError('{} not compiled. Run compile.com first'.format(filename))
 
 # Check that all data files are available
-required = ['../data/synthe_files/continua.dat', '../data/synthe_files/molecules.dat']
+required = ['../data/synthe_files/continua.dat', '../data/synthe_files/molecules.dat', '../data/synthe_files/he1tables.dat']
 for filename in required:
     if not os.path.isfile('{}/{}'.format(python_path, filename)):
         raise ValueError('{} not found. Check BasicATLAS installation'.format(filename))
@@ -93,6 +93,24 @@ def load_f2(filename):
         content[i,1] = nanfloat(line[18:25])
         for j in range(2, 8):
             content[i,j] = nanfloat(line[25 + (j - 2) * 11:25 + (j - 1) * 11])
+    return content
+
+def load_f18(filename):
+    def nanfloat(s):
+        try:
+            return float(s)
+        except:
+            return np.nan
+
+    f = open(filename, 'r')
+    lines = f.read().strip().split('\n')
+    f.close()
+    content = np.zeros((len(lines), 10), dtype = np.float32, order = 'F')
+    for i, line in enumerate(lines):
+        content[i,0] = nanfloat(line[1:6])
+        content[i,1] = nanfloat(line[6:14])
+        for j in range(2, 10):
+            content[i,j] = nanfloat(line[14 + (j - 2) * 7:14 + (j - 1) * 7])
     return content
 
 def init_xnfpelsyn():
@@ -240,10 +258,16 @@ def init_synthe():
         SYNTHE library with `.load_linelist()`, `.load_xnfpelsyn()` and `.run()` methods bound to it
     """
     # Load the library
-    lib = ctypes.CDLL('bin/synthe.so')
+    lib = ctypes.CDLL('{}/{}'.format(python_path, 'bin/synthe.so'))
 
     # Flag to track if SYNTHE has run
     lib.has_run = False
+
+    # Load he1tables.dat (fort.18)
+    lib.f18 = load_f18('{}/{}'.format(python_path, '../data/synthe_files/he1tables.dat'))
+    lib.set_f18.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+    pointer = lib.f18.ctypes.data_as(ctypes.c_void_p)
+    lib.set_f18(pointer, lib.f18.shape[0], lib.f18.shape[1])
 
     # Bound method to make the linelist (previously loaded with load_linelist()) and turbulent velocity available to SYNTHE
     def load_linelist(self, f12, f19, meta, vturb):
@@ -308,7 +332,7 @@ def init_spectrv():
         SPECTRV library with `.load_xnfpelsyn()`, `.load_synthe()`, `.run()` and `get_spectrum()` methods bound to it
     """
     # Load the library
-    lib = ctypes.CDLL('bin/spectrv.so')
+    lib = ctypes.CDLL('{}/{}'.format(python_path, 'bin/spectrv.so'))
 
     # Flag to track if SPECTRV has run
     lib.has_run = False

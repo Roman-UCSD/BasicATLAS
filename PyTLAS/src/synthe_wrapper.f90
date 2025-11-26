@@ -66,6 +66,8 @@ module synthe_wrapper
 
   real(c_float), pointer :: asynth(:,:) => null()
 
+  real(c_float), pointer :: f18(:,:) => null()
+
 contains
 
   subroutine run_synthe() bind(c)
@@ -73,6 +75,32 @@ contains
     call SYNTHE
 
   end subroutine run_synthe
+
+  subroutine set_f18(ptr, n, m) bind(c)
+      use iso_c_binding
+      type(c_ptr), value :: ptr
+      integer(c_int), value :: n, m
+
+      call c_f_pointer(ptr, f18, [n, m])
+  end subroutine set_f18
+
+  subroutine loadf18(idx, mode, S_FNE, S_DWL, S_PHI, S_PHI4026, S_PHI4387, S_NE, S_IL) bind(c, name="loadf18_")
+      use iso_c_binding
+      integer(c_int), intent(in) :: idx, mode, S_NE, S_IL
+      real(c_float), intent(out) :: S_FNE, S_DWL, S_PHI(8), S_PHI4026(4,8,196), S_PHI4387(4,8,204)
+
+      S_FNE = f18(idx,1)
+      S_DWL = f18(idx,2)
+      if (mode .eq. 1) then
+        S_PHI(:) = f18(idx,3:10)
+      endif
+      if (mode .eq. 2) then
+        S_PHI4026(:,S_NE,S_IL) = f18(idx,3:6)
+      endif
+      if (mode .eq. 3) then
+        S_PHI4387(:,S_NE,S_IL) = f18(idx,3:6)
+      endif
+  end subroutine loadf18
 
   subroutine set_asynth(ptr_asynth, n_wl) bind(c)
     use iso_c_binding
