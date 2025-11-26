@@ -37,6 +37,10 @@ module spectrv_wrapper
   real(c_float), pointer :: asynth(:,:) => null()
   real(c_double), pointer :: spectrum(:,:) => null()
 
+  real(c_double), bind(c, name='wbegin') :: wbegin = 0.0
+  real(c_double), bind(c, name='deltaw') :: deltaw = 0.0
+  integer(c_int), bind(c, name='numnu') :: numnu = 0
+
 contains
 
   subroutine run_spectrv() bind(c)
@@ -61,6 +65,16 @@ contains
 
     spectrum(idx,:) = S_Q(:2)
   end subroutine update_spectrum
+
+  subroutine update_meta(S_WBEGIN, S_DELTAW, S_NUMNU) bind(c, name="update_meta_")
+    use iso_c_binding
+    integer(c_int), intent(in)  :: S_NUMNU
+    real(c_double), intent(in)  :: S_WBEGIN, S_DELTAW
+
+    wbegin = S_WBEGIN
+    deltaw = S_DELTAW
+    numnu = S_NUMNU
+  end subroutine update_meta
 
   subroutine set_asynth(ptr_asynth, n_wl) bind(c)
     use iso_c_binding
