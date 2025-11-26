@@ -1,5 +1,5 @@
---- /dev/fd/63	2025-11-25 18:05:50.667177691 -0500
-+++ /dev/fd/62	2025-11-25 18:05:50.667177691 -0500
+--- /dev/fd/63	2025-11-26 01:55:48.159377596 -0500
++++ /dev/fd/62	2025-11-26 01:55:48.159377596 -0500
 @@ -1,4 +1,7 @@
 -      PROGRAM XNFPELSYN
 +      SUBROUTINE XNFPELSYN(out_teff_logg,out_frqedg,out_wledge,
@@ -87,7 +87,7 @@
        NUMNU=0
        DO 18 I=1,IN-1
        NUMNU=NUMNU+1
-@@ -214,8 +242,9 @@
+@@ -214,9 +242,11 @@
        FREQSET(NUMNU)=2.99792458D17/(ABS(WLEDGE(I))+ABS(WLEDGE(I+1)))*2.
        NUMNU=NUMNU+1
     18 FREQSET(NUMNU)=ABS(FRQEDG(I+1))*1.0000001
@@ -97,9 +97,11 @@
 +c      WRITE(10)NUMNU,(FREQSET(NU),NU=1,NUMNU)
 +      OUT_FREQSET=FREQSET(:NUMNU)
        ITEMP=ITEMP+1
++      CALL POPS(1.00D0,-100,XNFH)
        CALL POPS(1.00D0,12,XNFH)
        CALL POPS(2.01D0,12,XNFHE)
-@@ -276,20 +305,36 @@
+       CALL POPS(1.01D0,11,XNFPH)
+@@ -276,20 +306,36 @@
        WAVE=2.99792458D17/FREQ
        WAVENO=1.E7/WAVE
        CALL KAPP(N,NSTEPS,STEPWT)
@@ -141,7 +143,7 @@
        DO 30 NELEM=1,99
        DO 30 ION=1,10
        DO 30 J=1,NRHOX
-@@ -363,27 +408,33 @@
+@@ -363,27 +409,33 @@
        IT=ITEMP
        IP=J
  C
@@ -195,7 +197,7 @@
        END
        FUNCTION XFREEF(CARD)
        IMPLICIT REAL*8 (A-H,O-Z)
-@@ -393,14 +444,16 @@
+@@ -393,14 +445,16 @@
        MORE=1
        XFREEF=FREEFF(CARD)
  c      write(6,66)xfreef,numcol,last

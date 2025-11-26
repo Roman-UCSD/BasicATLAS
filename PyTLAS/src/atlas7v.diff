@@ -1,5 +1,5 @@
---- /dev/fd/63	2025-11-25 18:05:44.370170181 -0500
-+++ /dev/fd/62	2025-11-25 18:05:44.370170181 -0500
+--- /dev/fd/63	2025-11-26 01:52:56.798134812 -0500
++++ /dev/fd/62	2025-11-26 01:52:56.798134812 -0500
 @@ -6,6 +6,9 @@
  C     revised 31jul04
        IMPLICIT REAL*8 (A-H,O-Z)
@@ -139,7 +139,18 @@
  C
        RETURN
  C************
-@@ -2994,8 +3006,8 @@
+@@ -2888,6 +2900,10 @@
+       COMMON /XNMOL/CODEMOL(MAXMOL),XNMOL(kw,MAXMOL),
+      1              XNFPMOL(kw,MAXMOL),NUMMOL
+       DATA ITEMP1/0/
++      IF (MODE.EQ.-100) THEN
++      ITEMP1=0
++      RETURN
++      ENDIF
+       IF(IFMOL.EQ.1)GO TO 200
+       IF(IFPRES.EQ.1.AND.ITEMP.NE.ITEMP1)CALL NELECT
+       ITEMP1=ITEMP
+@@ -2994,8 +3010,8 @@
        DO 401 I=1,NZ
        NELEM=NELEMZ(I)
    401 EL(I)=ELEM(NELEM)
@@ -150,7 +161,7 @@
    406 XNE(1)=P(1)/TK(1)/2.
        DO 500 J=1,NRHOX
        IF(J.GT.1)XNE(J)=XNE(J-1)*P(J)/P(J-1)
-@@ -4032,19 +4044,22 @@
+@@ -4032,19 +4048,22 @@
  c      OPEN(UNIT=2,STATUS='OLD',SHARED,READONLY)
        DO 1 JMOL=1,MAXMOL
      1 CODE(JMOL)=0.
@@ -178,7 +189,7 @@
     14 FORMAT(I5,F18.2,F7.3,1P6E11.4)
        DO 15 II=1,8
        IF(C.GE.XCODE(II))GO TO 16
-@@ -4098,11 +4113,11 @@
+@@ -4098,11 +4117,11 @@
        DO 28 KLOC=1,NLOC
        ID=KCOMPS(KLOC)
     28 KCOMPS(KLOC)=IFEQUA(ID)
@@ -195,7 +206,7 @@
        RETURN
        END
        SUBROUTINE NMOLEC
-@@ -4376,18 +4391,18 @@
+@@ -4376,18 +4395,18 @@
    109 CONTINUE
    110 CONTINUE
        IF(ITER.LT.NUMITS)GO TO 120
@@ -223,7 +234,7 @@
    120 CONTINUE
        DO 125 K=2,NEQUA
        ID=IDEQUA(K)
-@@ -4438,11 +4453,11 @@
+@@ -4438,11 +4457,11 @@
        NN=(NUMMOL/10)*10
        IF(NN.LT.NUMMOL)NN=NN+10
        DO 151 JMOL1=1,NN,10
