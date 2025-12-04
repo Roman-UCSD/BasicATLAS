@@ -18,8 +18,17 @@ import ctypes
 import types
 import os
 import scipy.constants as spc
+import pandas as pd
 
 python_path = os.path.dirname(os.path.realpath(__file__))
+
+# Load in the solar abundances
+solar = pd.read_csv('{}/../data/solar.csv'.format(python_path), comment = '#', header = None)
+solar = solar[[0, 1, 2, 5]]
+solar.columns = ['Z', 'A', 'abun', 'symbol']
+solar.sort_values(by = 'Z', inplace = True)
+solar.reset_index(drop = True, inplace = True)
+assert np.all(solar['Z'] == np.arange(1, 100))
 
 # Check that all SO libraries are available
 required = ['bin/xnfpelsyn.so', 'bin/synthe.so', 'bin/spectrv.so']
@@ -136,7 +145,7 @@ def init_xnfpelsyn():
 
     This function loads the XNFPELSYN library, makes the necessary data files (fort.2 and fort.17) available
     to it, defines a structure to store the output and binds methods to push the ATLAS structure into the
-    library and to run XNFPELSYN calculations
+    library, to update chemical composition and to run XNFPELSYN calculations
     
     Returns
     -------
@@ -157,6 +166,12 @@ def init_xnfpelsyn():
     lib.set_f2.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
     pointer = lib.f2.ctypes.data_as(ctypes.c_void_p)
     lib.set_f2(pointer, lib.f2.shape[0], lib.f2.shape[1])
+
+    # Allocate array to store abundances (the first element is XSCALE, the rest is ABUND(99))
+    lib.abun = np.full(100, -1.0, dtype = np.float64, order = 'F')
+    lib.set_abun.argtypes = [ctypes.c_void_p]
+    pointer = lib.abun.ctypes.data_as(ctypes.c_void_p)
+    lib.set_abun(pointer)
 
     # Link output arrays for XNFPELSYN
     lib.xnfpelsyn_output = {
@@ -189,6 +204,27 @@ def init_xnfpelsyn():
         pointer = self.f5.ctypes.data_as(ctypes.c_void_p)
         self.set_f5(pointer, self.f5.shape[0], self.f5.shape[1])
     lib.load_structure = types.MethodType(load_structure, lib)
+
+    # Bound method to update abundances in XNFPELSYN
+    def update_abun(self, zscale, abun, Y = -0.1, std_round = True):
+        num = solar.abun.to_numpy(dtype = np.float64, copy = True)
+        num[2:] += zscale
+        for element in abun:
+            element_mask = solar.symbol == element
+            num[element_mask] += abun[element]
+        num = 10 ** num
+        if Y >= 0.0 and Y <= 1.0:
+            num[1] = np.sum(num[solar.Z != 2] * solar.A[solar.Z != 2]) * Y / (solar.A[1] - solar.A[1] * Y)
+        total = np.sum(num)
+        self.abun[0] = 10 ** zscale
+        self.abun[1:3] = num[:2] / total
+        self.abun[3:] = np.log10(num[2:] / total) - zscale
+        if std_round:
+            self.abun[0] = np.round(self.abun[0], 6)
+            self.abun[1:3] = np.round(self.abun[1:3], 5)
+            self.abun[3:] = np.round(self.abun[3:], 2)
+            self.abun[3:][self.abun[3:] < -20.0] = -20.0
+    lib.update_abun = types.MethodType(update_abun, lib)
 
     # Bound method to run XNFPELSYN
     def run(self):
@@ -368,6 +404,12 @@ def init_spectrv():
         self.set_f2.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
         pointer = self.f2.ctypes.data_as(ctypes.c_void_p)
         self.set_f2(pointer, self.f2.shape[0], self.f2.shape[1])
+
+        # Make the element abundances in XNFPELSYN available to SPECTRV
+        self.abun = xnfpelsyn.abun
+        self.set_abun.argtypes = [ctypes.c_void_p]
+        pointer = self.abun.ctypes.data_as(ctypes.c_void_p)
+        self.set_abun(pointer)
 
         # Make XNFPELSYN output available to SPECTRV
         self.xnfpelsyn_output = xnfpelsyn.xnfpelsyn_output

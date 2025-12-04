@@ -1,17 +1,20 @@
---- /dev/fd/63	2025-11-26 00:39:53.086243594 -0500
-+++ /dev/fd/62	2025-11-26 00:39:53.086243594 -0500
+--- /dev/fd/63	2025-12-04 18:07:13.533540086 -0500
++++ /dev/fd/62	2025-12-04 18:07:13.533540086 -0500
 @@ -1,4 +1,4 @@
 -      PROGRAM SYNTHE
 +      SUBROUTINE SYNTHE
  c     revised 13jul15   molecule number increased, parameter mw=139, mw6=mw*6
  c     revised 11nov14   modified to agree with Fiorella Castelli's Linux version
  c                       including He I lines and reverting to her HPROF
-@@ -101,13 +101,22 @@
+@@ -101,13 +101,30 @@
        REAL*8 WL,E,EP,WLVAC,CENTER,CONCEN
  c      REAL*8 LABEL,LABELP,OTHER1,OTHER2
  	real*8 wavel
 +
 +      REAL*4, ALLOCATABLE :: FORT14(:,:)
++      LOGICAL RESET_TRIGGER
++      COMMON /RESET_FLAG/ RESET_TRIGGER
++      DATA RESET_TRIGGER/.FALSE./
 +
  C
        FASTEX(X)=EXTAB(IFIX(X)+1)*
@@ -20,6 +23,11 @@
 -      READ(93)NLINES,LENGTH,IFVAC,IFNLTE,N19,TURBV,DECKJ,IFPRED,
 -     1     WLBEG,WLEND,RESOLU,RATIO,RATIOLG,CUTOFF,LINOUT
 -      write(6,867)NLINES,LENGTH,LINOUT
++      RESET_TRIGGER=1
++      CALL XLINOP
++      CALL DISCARD(HPROF4(N,M,J,DELW,DOPPH))
++      CALL READBCS
++      RESET_TRIGGER=0
 +      N_F12=0
 +      N_F19=0
 +      N_F9=0
@@ -33,7 +41,7 @@
   867  format(1x,'NLINES='I20,1x,'LENGTH=',I20,1x,'LINOUT=',I10)
        IXWLBEG=DLOG(WLBEG)/RATIOLG
        WBEGIN=DEXP(IXWLBEG*RATIOLG)
-@@ -115,14 +124,14 @@
+@@ -115,14 +132,14 @@
        IXWLBEG=IXWLBEG+1
        WBEGIN=DEXP(IXWLBEG*RATIOLG)
        ENDIF
@@ -54,7 +62,7 @@
        IF(LINOUT.LT.0.)GO TO 3442
        IF(N19.GT.0)THEN
        REWIND 20
-@@ -131,24 +140,26 @@
+@@ -131,24 +148,26 @@
        READ(20)LINDAT8I,LABEL,LABELP,OTHER1,OTHER2,LINDAT8II,
       1 LINDAT4I,REF,LINDAT4II         
  c 3440 WRITE(13)LINDAT8,LINDAT4
@@ -88,7 +96,7 @@
  C
        DO 3456 I=1,1001
        EXTAB(I)=EXP(-FLOAT(I-1))
-@@ -161,13 +172,17 @@
+@@ -161,13 +180,17 @@
        CALL TABVOIGT(VSTEPS,2001)
  C
  
@@ -112,7 +120,7 @@
   666  format(i10)
        WLEDGE(1)=ABS(WLEDGE(1))
        DO 2001 IEDGE=2,NEDGE
-@@ -179,8 +194,7 @@
+@@ -179,8 +202,7 @@
  C     READ(10)T,TKEV,TK,HKT,TLOG,HCKT,P,XNE,XNATOM,RHO,RHOX,VTURB,
  C    1XNFH,XNFHE,XNFH2
  C     ON VAX VARIABLES ARE READ REAL*8 AND CONVERTED TO REAL*4
@@ -122,7 +130,7 @@
        DO 2010 J=1,NRHOX
        T(J)=QT(J)
        TKEV(J)=QTKEV(J)
-@@ -204,23 +218,26 @@
+@@ -204,23 +226,26 @@
        HFIELD(J)=DECKJ(2,J)
   2011 CONTINUE
  C
@@ -156,7 +164,7 @@
        NU=0
        DO 2002 IEDGE=1,NEDGE-1
        NU=NU+1
-@@ -243,7 +260,7 @@
+@@ -243,7 +268,7 @@
        DO 2006 NBUFF=1,LENGTH
   2006 CONTINUUM(NBUFF)=10.**CONTINUUM(NBUFF)
  C     
@@ -165,7 +173,7 @@
  C      IF(IFTP(J).EQ.0)GO TO 400
        XNFPH(J,1)=QXNFPEL(1)
        XNFPH(J,2)=QXNFPEL(2)
-@@ -269,7 +286,7 @@
+@@ -269,7 +294,7 @@
  C
  C     DOPPLER SHIFT IN POINT NUMBERS
        NVSHIFT=RESOLU*VELSHIFT(J)/299792.458D0+.5D0
@@ -174,7 +182,7 @@
    215 FORMAT(I5,'  VELOCITY SHIFT',F9.3,I7)
  C     ADD LINES TO BUFFER
        MLINES=0
-@@ -277,7 +294,9 @@
+@@ -277,7 +302,9 @@
        IF(N12.EQ.0)GO TO 400
        N191=N19+1
        DO 350 ILINE=N191,NLINES
@@ -185,7 +193,7 @@
  c      if(alpha.ne.0.0)write(6,1788)nbuff,nelion,alpha
   1788 format(2I10,'alpha=',f10.3)
        QCONGF=CONGF
-@@ -296,12 +315,12 @@
+@@ -296,12 +323,12 @@
        WAVEl=WBEGIN*RATIO**(NBUFF-1)
  	nelem=int(nelion/6)+1
  	v2=(1.-alpha)/2
@@ -200,7 +208,7 @@
   1799   format('hfactor',1p3E10.4)
  	txnxn(j)=xnfh(j)*hfactor(j)+xnfhe(J,1)*hefactor(j)+xnfh2(j)*h2factor(j)
  	endif
-@@ -364,23 +383,26 @@
+@@ -364,23 +391,26 @@
        DO 26 NBEG=1,LENGTH,LENREC
        IREC=IREC+1
        NEND=NBEG+LENREC-1
@@ -232,7 +240,7 @@
     93 CONTINUE
        NOUT=LENREC
        LASTREC=LENGTH-NUMREC*LENREC+LENREC
-@@ -391,15 +413,17 @@
+@@ -391,15 +421,17 @@
        FREQ=2.99792458D17/WAVE
        DO 94 J=1,NRHOX
     94 ASYNTH(J)=TRANSP(J,I)*(1.-EXP(-FREQ*HKT(J)))
@@ -253,7 +261,7 @@
   8030 FORMAT(1x,'NLINES=',I20,1x,'LINOUT=',I10)
        IF(NLINES.EQ.0)GO TO 810
        IF(LINOUT.LT.0)GO TO 810
-@@ -426,21 +450,22 @@
+@@ -426,21 +458,22 @@
        N9=N9+1
        LINE(I)=N9
    809 CONTINUE
@@ -284,7 +292,7 @@
    817 FORMAT('J='I10,'MAXLINE=',2I10)
        K=0
        JOUT=0
-@@ -487,11 +512,12 @@
+@@ -487,11 +520,12 @@
        IREC=IREC+1
        WRITE(14,REC=IREC)RECORD
        K=0
@@ -299,7 +307,7 @@
    877 FORMAT(28H TOO MANY LINES TO TRANSPOSE)
        call exit
    808 CONTINUE
-@@ -500,10 +526,11 @@
+@@ -500,10 +534,11 @@
        NLAST=N9-NUMREC*LENREC+LENREC
        NCEN=0
        DO 899 N=1,NUMREC
@@ -313,7 +321,7 @@
    893 CONTINUE
        NOUT=LENREC
        IF(N.EQ.NUMREC)NOUT=NLAST
-@@ -516,14 +543,15 @@
+@@ -516,14 +551,15 @@
        DO 897 J=1,NRHOX
    897 ALINEC(J)=TRANSP(J,I)*(1.-EXP(-FREQ*HKT(J)))
  C  895 WRITE(9)LINDAT8,LINDAT4,ALINEC
@@ -335,7 +343,24 @@
        END
        SUBROUTINE XLINOP(J,N19,CUTOFF,VELSHIFT,IFVAC,LINOUT)
  c      PARAMETER (kw=99)
-@@ -609,7 +637,7 @@
+@@ -592,10 +628,15 @@
+      8 26*0.,26*0.,                                                     8.,11.
+      9 26*0.,26*0./                                                     5.,19.
+       DATA ITEMP1/0/
+-C
++      LOGICAL RESET_TRIGGER
++      COMMON /RESET_FLAG/ RESET_TRIGGER
+       FASTEX(X)=EXTAB(IFIX(X)+1)*
+      1EXTABF(IFIX((X-FLOAT(IFIX(X)))*1000.+1.5))
+ C
++      IF (RESET_TRIGGER) THEN
++      ITEMP1=0
++      RETURN
++      END IF
+       IF(ITEMP.EQ.ITEMP1)GO TO 95
+       EHYD(1)=0.D0
+       EHYD(2)=82259.105D0
+@@ -609,7 +650,7 @@
      1 EHYD(N)=109678.764D0-109677.576D0/N**2
        DO 2 N=1,99
      2 ALPHAHYD(N)=1.D7/(EHYD(N+1)-EHYD(N))
@@ -344,7 +369,7 @@
     90 FORMAT('       NMERGE    EMERGE    EMERGEH')
        DO 91 K=1,NRHOX
  C     FOR NEUTRALS  FOR IONS NSTARK=NSTARK*Z**.25  NDOPP=NDOPP*Z**(2./3.)
-@@ -621,7 +649,8 @@
+@@ -621,7 +662,8 @@
        NMERGE=INGLIS-1.5
        EMERGE(K)=109737.312D0/NMERGE**2
        EMERGEH(K)=109677.576D0/NMERGE**2
@@ -354,7 +379,7 @@
     92 FORMAT(I3,4F10.3)
        ITEMP1=ITEMP
  C
-@@ -631,9 +660,11 @@
+@@ -631,9 +673,11 @@
        OLDELOH=1.E30*FLOAT(J*ITEMP)
        DOPRATIO=1.D0+VELSHIFT/299792.458D0
        REWIND 19
@@ -368,7 +393,7 @@
  c      READ(19)WL,ELO,GF,NBLO,NBUP,NELION,TYPE,NCON,NELIONX,
  c     1GAMMAR,GAMMAS,GAMMAW,alpha,NBUFF,LIM
  c      write(6,816)iline,wl,elo,gf,alpha
-@@ -983,7 +1014,7 @@
+@@ -983,7 +1027,7 @@
        IF(TYPE.EQ.-4)DOPWL=DOPWL*1.155
  c      KAPCEN=KAPPA0*HE1PROF(J,WL,WL,DOPWL,GAMMAR,GAMMAS) 
        KAPCEN=KAPPA0*HE1PROF(J,WL4,WL4,DOPWL,GAMMAR,GAMMAS) 
@@ -377,7 +402,31 @@
        MLINES=MLINES+1
        IF(WL.GT.WLEND)GO TO 813
  C     RED WING
-@@ -2852,12 +2883,15 @@
+@@ -1180,8 +1224,14 @@
+      5 2.860E+01, 2.712E+01, 2.572E+01, 2.442E+01, 2.319E+01, 2.204E+01,
+      6 2.096E+01, 1.994E+01, 1.898E+01, 1.808E+01, 1.722E+01, 1.642E+01,
+      7 1.566E+01, 1.495E+01, 1.427E+01, 1.363E+01/
++      LOGICAL RESET_TRIGGER
++      COMMON /RESET_FLAG/ RESET_TRIGGER
+       FASTEX(X)=EXTAB(IFIX(X)+1)*
+      1EXTABF(IFIX((X-FLOAT(IFIX(X)))*1000.+1.5))
++      IF (RESET_TRIGGER) THEN
++      ITEMP1=0
++      RETURN
++      END IF
+       IF(ITEMP.EQ.ITEMP1)GO TO 20
+ C     SET UP DEPTH VECTORS
+       ITEMP1=ITEMP
+@@ -2849,15 +2899,24 @@
+       DATA NXNE/7,8,8,7/
+       DATA XNE1/13.,14.,14.,13./
+       DATA ITEMP1/0/
++      LOGICAL RESET_TRIGGER
++      COMMON /RESET_FLAG/ RESET_TRIGGER
++      IF (RESET_TRIGGER) THEN
++      ITEMP1=0
++      RETURN
++      END IF
        IF(DLAM(1,1).EQ.-150.)GO TO 10
  c      OPEN(UNIT=18,FORM='FORMATTED',STATUS='OLD',READONLY,SHARED)
  C     4471
@@ -396,7 +445,7 @@
     34 FORMAT(1X,F5.1,F8.2,8F7.3)
  c	TYPE*,FNE,DWL,(PHI(I),I=1,8)
        DO 21 IT=1,4
-@@ -2866,35 +2900,44 @@
+@@ -2866,35 +2925,44 @@
     20 CONTINUE
     22 DLAM(IL,1)=DWL-150.
  C     4026
@@ -451,3 +500,12 @@
        JSAVE=0
  C
     10 IF(J*LINE.EQ.JSAVE)GO TO 550
+@@ -3082,3 +3150,7 @@
+      T 'NP', 'PU', 'AM', 'CM', 'BK', 'CF', 'ES'/
+       RETURN
+       END
++      SUBROUTINE DISCARD(X)
++        REAL*8 X
++        RETURN
++      END
+\ No newline at end of file

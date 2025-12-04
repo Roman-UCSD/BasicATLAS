@@ -41,13 +41,22 @@ module spectrv_wrapper
   real(c_double), bind(c, name='deltaw') :: deltaw = 0.0
   integer(c_int), bind(c, name='numnu') :: numnu = 0
 
+  real(c_double), pointer :: abun(:) => null()
+
 contains
 
   subroutine run_spectrv() bind(c)
 
-    call SPECTRV
+    call SPECTRV(abun)
 
   end subroutine run_spectrv
+
+  subroutine set_abun(ptr) bind(c)
+      use iso_c_binding
+      type(c_ptr), value :: ptr
+
+      call c_f_pointer(ptr, abun, [100])
+  end subroutine set_abun
 
   subroutine set_spectrum(ptr_spectrum, n_wl) bind(c)
     use iso_c_binding

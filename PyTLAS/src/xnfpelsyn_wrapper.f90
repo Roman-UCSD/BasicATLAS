@@ -12,6 +12,8 @@ module xnfpelsyn_wrapper
 
   real(c_double), pointer :: f2(:,:) => null()
 
+  real(c_double), pointer :: abun(:) => null()
+
 contains
 
   subroutine run_xnfpelsyn(teff_logg, frqedg, wledge, cmedge, idmol, momass, &
@@ -32,9 +34,16 @@ contains
     real(c_double), intent(out) :: xnfpel(72,139,6)
     real(c_double), intent(out) :: dopple(72,139,6)
 
-    call XNFPELSYN(teff_logg,frqedg,wledge,cmedge,idmol,momass,freqset,structure,continall,contabs,contscat,xnfpel,dopple)
+    call XNFPELSYN(teff_logg,frqedg,wledge,cmedge,idmol,momass,freqset,structure,continall,contabs,contscat,xnfpel,dopple,abun)
 
   end subroutine run_xnfpelsyn
+
+  subroutine set_abun(ptr) bind(c)
+      use iso_c_binding
+      type(c_ptr), value :: ptr
+
+      call c_f_pointer(ptr, abun, [100])
+  end subroutine set_abun
 
   subroutine set_f2(ptr, n, m) bind(c)
       use iso_c_binding

@@ -1,15 +1,15 @@
---- /dev/fd/63	2025-11-26 01:55:48.159377596 -0500
-+++ /dev/fd/62	2025-11-26 01:55:48.159377596 -0500
+--- /dev/fd/63	2025-12-04 18:06:57.536548657 -0500
++++ /dev/fd/62	2025-12-04 18:06:57.534548658 -0500
 @@ -1,4 +1,7 @@
 -      PROGRAM XNFPELSYN
 +      SUBROUTINE XNFPELSYN(out_teff_logg,out_frqedg,out_wledge,
 +     &     out_cmedge,out_idmol,out_momass,out_freqset,
 +     &     out_structure,out_continall,out_contabs,
-+     &     out_contscat,out_xnfpel,out_dopple)
++     &     out_contscat,out_xnfpel,out_dopple,in_abun)
  c     revised 13jul2015 to allow more molecules, parameter mm
  c     revised 27may2015  BeO and BO replaced by NaH and KH
  c     revised 04nov2014  constants given D exponents
-@@ -8,6 +11,22 @@
+@@ -8,6 +11,27 @@
        IMPLICIT REAL*8 (A-H,O-Z)
        PARAMETER (kw=99,mw=139,mm=mw-39)
        PARAMETER (MAXMOL=200,MAX1=MAXMOL+1,MAXEQ=30,MAXLOC=3*MAXMOL)
@@ -28,29 +28,69 @@
 +      REAL*8 out_contscat(72,1131)
 +      REAL*8 out_xnfpel(72,139,6)
 +      REAL*8 out_dopple(72,139,6)
++      REAL*8 in_abun(100)
++
++      LOGICAL RESET_TRIGGER
++      COMMON /RESET_FLAG/ RESET_TRIGGER
++      DATA RESET_TRIGGER/.FALSE./
 +
        COMMON /ABROSS/ABROSS(kw),TAUROS(kw)
        COMMON /ABTOT/ABTOT(kw),ALPHA(kw)
        COMMON /BAL/BAL1(kw,9),AAL1(kw),SAL1(kw),XNFPAL(kw,2),BAL2(kw,1)
-@@ -144,6 +163,7 @@
+@@ -144,7 +168,40 @@
       B   104.,  107.,  155.,  999.,  999.,  999.,  999.,  999.,  999.,
       C   999./
  c      OPEN(UNIT=17,TYPE='OLD',READONLY,SHARED)
++
++c     RESET VARIABLES
++
 +      IF17LINE=0
++      DO 9997 I = 1,81
++      CARD(I) = ' '
++ 9997 CONTINUE
++      RESET_TRIGGER=1
++      CALL POPS
++      CALL KAPP
++      CALL HMINOP
++      CALL H2COLLOP
++      CALL LUKEOP
++      CALL N1OP
++      CALL MG2OP
++      CALL SI2OP
++      CALL CA2OP
++      CALL HOTOP
++      CALL H2RAOP
++      CALL HLINOP
++      CALL STARK
++      CALL LINOP
++      RESET_TRIGGER=0
++
++
++
     10 CALL READIN(20)
++      IF(IN_ABUN(2).GT.0)THEN
++      XSCALE=IN_ABUN(1)
++      ABUND(:)=IN_ABUN(2:)
++      XABUND(3:)=EXP(ABUND(3:)*2.30258509299405D0)*XSCALE
++      XABUND(1)=ABUND(1)
++      XABUND(2)=ABUND(2)
++      ENDIF
        IFOP(14)=0
        IFOP(15)=0
-@@ -160,12 +180,15 @@
+       IFOP(16)=0
+@@ -159,13 +216,15 @@
+       ITER=1
        NUMITS=1
        NT=NRHOX
-       REWIND 10
+-      REWIND 10
 -      WRITE(10)NT,TEFF,GLOG,TITLE
++c      REWIND 10
 +c      WRITE(10)NT,TEFF,GLOG,TITLE
 +      out_teff_logg(1) = TEFF
 +      out_teff_logg(2) = GLOG
        IN=0
-+      F17LINE=0
-    11 EDGE=XFREEF(CARD)
+-   11 EDGE=XFREEF(CARD)
++   11 EDGE=XFREEF(CARD,IF17LINE)
        IF(EDGE.EQ.0.)GO TO 14
        IN=IN+1
 -      PRINT 15,IN,EDGE
@@ -58,7 +98,7 @@
        IF(ABS(EDGE).LT.1.D6)GO TO 12
        IF(ABS(EDGE).LT.1.D25)GO TO 13
  C     WAVENUMBERS MUST BE MULTIPLIED BY 1.E25
-@@ -182,9 +205,9 @@
+@@ -182,9 +241,9 @@
     13 FRQEDG(IN)=EDGE
        WLEDGE(IN)=2.99792458D17/EDGE
        CMEDGE(IN)=1.D7/WLEDGE(IN)
@@ -71,7 +111,7 @@
        GO TO 11
     14 DO 17 LAST=2,IN
        LAST1=IN-LAST+2
-@@ -204,8 +227,13 @@
+@@ -204,8 +263,13 @@
        CMEDGE(I)=SAVE
     16 CONTINUE
     17 CONTINUE
@@ -87,7 +127,7 @@
        NUMNU=0
        DO 18 I=1,IN-1
        NUMNU=NUMNU+1
-@@ -214,9 +242,11 @@
+@@ -214,8 +278,9 @@
        FREQSET(NUMNU)=2.99792458D17/(ABS(WLEDGE(I))+ABS(WLEDGE(I+1)))*2.
        NUMNU=NUMNU+1
     18 FREQSET(NUMNU)=ABS(FRQEDG(I+1))*1.0000001
@@ -97,11 +137,9 @@
 +c      WRITE(10)NUMNU,(FREQSET(NU),NU=1,NUMNU)
 +      OUT_FREQSET=FREQSET(:NUMNU)
        ITEMP=ITEMP+1
-+      CALL POPS(1.00D0,-100,XNFH)
        CALL POPS(1.00D0,12,XNFH)
        CALL POPS(2.01D0,12,XNFHE)
-       CALL POPS(1.01D0,11,XNFPH)
-@@ -276,20 +306,36 @@
+@@ -276,20 +341,36 @@
        WAVE=2.99792458D17/FREQ
        WAVENO=1.E7/WAVE
        CALL KAPP(N,NSTEPS,STEPWT)
@@ -143,7 +181,7 @@
        DO 30 NELEM=1,99
        DO 30 ION=1,10
        DO 30 J=1,NRHOX
-@@ -363,27 +409,33 @@
+@@ -363,29 +444,35 @@
        IT=ITEMP
        IP=J
  C
@@ -195,9 +233,12 @@
 -      CALL EXIT
 +      RETURN
        END
-       FUNCTION XFREEF(CARD)
+-      FUNCTION XFREEF(CARD)
++      FUNCTION XFREEF(CARD,IF17LINE)
        IMPLICIT REAL*8 (A-H,O-Z)
-@@ -393,14 +445,16 @@
+       COMMON /FREE/NUMCOL,LETCOL,LAST,MORE,IFFAIL,MAXPOW,WORD(6)
+       DIMENSION CARD(81)
+@@ -393,14 +480,16 @@
        MORE=1
        XFREEF=FREEFF(CARD)
  c      write(6,66)xfreef,numcol,last
