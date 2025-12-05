@@ -474,7 +474,7 @@ def synthe(output_dir, min_wl, max_wl, res = 600000.0, vturb = 1.5, abun_adjust 
     # Adjust abundances in spectral synthesis
     if len(abun_adjust) != 0:
         elements, params = parse_atlas_abundances(output_dir + '/output_synthe.out', lookbehind = 1, params = ['ABUNDANCE SCALE'])
-        settings = Settings().abun_atlas_to_std(elements, np.log10(params['ABUNDANCE SCALE']))
+        settings = Settings().abun_atlas_to_std(elements, np.log10(params['ABUNDANCE SCALE']), rounding = 7)
         for element in abun_adjust:
             if element not in settings['abun']:
                 settings['abun'][element] = 0

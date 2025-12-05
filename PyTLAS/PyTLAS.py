@@ -199,7 +199,13 @@ def init_xnfpelsyn():
 
     # Bound method to load the ATLAS model into XNFPELSYN
     def load_structure(self, filename):
+        instructions = ['SURFACE FLUX', 'ITERATIONS 1 PRINT 2 PUNCH 2', 'CORRECTION OFF', 'PRESSURE OFF', 'READ MOLECULES', 'MOLECULES ON']
         self.f5 = load_text(filename)
+        # If the structure file begins with "TEFF" then we need to prepend it with a series of instructions for ATLAS7V
+        if bytes(self.f5[0,:4]) == 'TEFF'.encode('ascii'):
+            self.f5 = np.vstack([np.full((len(instructions), self.f5.shape[1]), ord(' '), dtype = self.f5.dtype, order = 'F'), self.f5])
+            for i, instruction in enumerate(instructions):
+                self.f5[i,:min(len(instruction), self.f5.shape[1])] = list(instruction.encode('ascii')[:self.f5.shape[1]])
         self.set_f5.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
         pointer = self.f5.ctypes.data_as(ctypes.c_void_p)
         self.set_f5(pointer, self.f5.shape[0], self.f5.shape[1])
@@ -220,8 +226,7 @@ def init_xnfpelsyn():
         self.abun[1:3] = num[:2] / total
         self.abun[3:] = np.log10(num[2:] / total) - zscale
         if std_round:
-            self.abun[0] = np.round(self.abun[0], 6)
-            self.abun[1:3] = np.round(self.abun[1:3], 5)
+            self.abun[0:3] = np.round(self.abun[0:3], 5)
             self.abun[3:] = np.round(self.abun[3:], 2)
             self.abun[3:][self.abun[3:] < -20.0] = -20.0
     lib.update_abun = types.MethodType(update_abun, lib)

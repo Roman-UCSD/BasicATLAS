@@ -5,7 +5,7 @@ import os
 python_path = os.path.dirname(os.path.realpath(__file__))
 
 class Settings:
-    def abun_atlas_to_std(self, elements, zscale):
+    def abun_atlas_to_std(self, elements, zscale, rounding = 2):
         """
         Convert ATLAS format abundances to the standard format. See abun_std_to_atlas() for the details of each
         format
@@ -36,7 +36,7 @@ class Settings:
             elif solar[symbol[Z == i][0]] < -90.0 and elements[i] > -20.0:
                 raise ValueError('No solar abundance for element {}'.format(symbol[Z == i][0]))
             else:
-                atlas_abun = np.round(elements[i] - np.log10(elements[1]) + 12.0 - solar[symbol[Z == i][0]], 2)
+                atlas_abun = np.round(elements[i] - np.log10(elements[1]) + 12.0 - solar[symbol[Z == i][0]], rounding)
             if atlas_abun != 0.0:
                 abun[symbol[Z == i][0]] = atlas_abun
             total_mass += 10 ** (atlas_abun + solar[symbol[Z == i][0]] + zscale) * A[Z == i][0]
