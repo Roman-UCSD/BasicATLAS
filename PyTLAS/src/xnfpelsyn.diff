@@ -1,5 +1,5 @@
---- /dev/fd/63	2025-12-04 21:17:39.059192014 -0500
-+++ /dev/fd/62	2025-12-04 21:17:39.059192014 -0500
+--- /dev/fd/63	2025-12-04 22:20:00.099105893 -0500
++++ /dev/fd/62	2025-12-04 22:20:00.099105893 -0500
 @@ -1,4 +1,7 @@
 -      PROGRAM XNFPELSYN
 +      SUBROUTINE XNFPELSYN(out_teff_logg,out_frqedg,out_wledge,
@@ -37,7 +37,7 @@
        COMMON /ABROSS/ABROSS(kw),TAUROS(kw)
        COMMON /ABTOT/ABTOT(kw),ALPHA(kw)
        COMMON /BAL/BAL1(kw,9),AAL1(kw),SAL1(kw),XNFPAL(kw,2),BAL2(kw,1)
-@@ -144,7 +168,44 @@
+@@ -144,7 +168,49 @@
       B   104.,  107.,  155.,  999.,  999.,  999.,  999.,  999.,  999.,
       C   999./
  c      OPEN(UNIT=17,TYPE='OLD',READONLY,SHARED)
@@ -78,11 +78,16 @@
 +      XABUND(3:)=EXP(ABUND(3:)*2.30258509299405D0)*XSCALE
 +      XABUND(1)=ABUND(1)
 +      XABUND(2)=ABUND(2)
++      WTMOLE=0.0
++      DO 1514 I=1,99
++ 1514 WTMOLE=WTMOLE+XABUND(I)*ATMASS(I)
++      DO 1513 J=1,kw
++ 1513 RHO(J)=XNATOM(J)*WTMOLE*1.660D-24
 +      ENDIF
        IFOP(14)=0
        IFOP(15)=0
        IFOP(16)=0
-@@ -159,13 +220,15 @@
+@@ -159,13 +225,15 @@
        ITER=1
        NUMITS=1
        NT=NRHOX
@@ -102,7 +107,7 @@
        IF(ABS(EDGE).LT.1.D6)GO TO 12
        IF(ABS(EDGE).LT.1.D25)GO TO 13
  C     WAVENUMBERS MUST BE MULTIPLIED BY 1.E25
-@@ -182,9 +245,9 @@
+@@ -182,9 +250,9 @@
     13 FRQEDG(IN)=EDGE
        WLEDGE(IN)=2.99792458D17/EDGE
        CMEDGE(IN)=1.D7/WLEDGE(IN)
@@ -115,7 +120,7 @@
        GO TO 11
     14 DO 17 LAST=2,IN
        LAST1=IN-LAST+2
-@@ -204,8 +267,13 @@
+@@ -204,8 +272,13 @@
        CMEDGE(I)=SAVE
     16 CONTINUE
     17 CONTINUE
@@ -131,7 +136,7 @@
        NUMNU=0
        DO 18 I=1,IN-1
        NUMNU=NUMNU+1
-@@ -214,8 +282,9 @@
+@@ -214,8 +287,9 @@
        FREQSET(NUMNU)=2.99792458D17/(ABS(WLEDGE(I))+ABS(WLEDGE(I+1)))*2.
        NUMNU=NUMNU+1
     18 FREQSET(NUMNU)=ABS(FRQEDG(I+1))*1.0000001
@@ -143,7 +148,7 @@
        ITEMP=ITEMP+1
        CALL POPS(1.00D0,12,XNFH)
        CALL POPS(2.01D0,12,XNFHE)
-@@ -276,20 +345,36 @@
+@@ -276,20 +350,36 @@
        WAVE=2.99792458D17/FREQ
        WAVENO=1.E7/WAVE
        CALL KAPP(N,NSTEPS,STEPWT)
@@ -185,7 +190,7 @@
        DO 30 NELEM=1,99
        DO 30 ION=1,10
        DO 30 J=1,NRHOX
-@@ -363,29 +448,35 @@
+@@ -363,29 +453,35 @@
        IT=ITEMP
        IP=J
  C
@@ -242,7 +247,7 @@
        IMPLICIT REAL*8 (A-H,O-Z)
        COMMON /FREE/NUMCOL,LETCOL,LAST,MORE,IFFAIL,MAXPOW,WORD(6)
        DIMENSION CARD(81)
-@@ -393,14 +484,16 @@
+@@ -393,14 +489,16 @@
        MORE=1
        XFREEF=FREEFF(CARD)
  c      write(6,66)xfreef,numcol,last
