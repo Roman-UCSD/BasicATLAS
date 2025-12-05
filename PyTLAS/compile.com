@@ -1,3 +1,5 @@
+mkdir -p bin
+
 # Apply patches to the original Kurucz codes: ATLAS7V, XNFPELSYN, SYNTHE and SPECTRV
 for diff_file in src/*.diff; do
     base=$(basename "$diff_file" .diff)
