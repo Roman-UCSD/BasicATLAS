@@ -6,7 +6,7 @@ python_path = os.path.dirname(os.path.realpath(__file__))
 
 # Check these files for presence
 no_hash = ['bin/atlas9mem.exe', 'bin/dfsortp.exe', 'bin/dfsynthe.exe', 'bin/kappa9.exe', 'bin/kapreadts.exe', 'bin/separatedf.exe', 'bin/xnfdf.exe', 'bin/rgfalllinesnew.exe', 'bin/rmolecasc.exe',
-           'bin/spectrv.exe', 'bin/synthe.exe', 'bin/xnfpelsyn.exe', 'bin/converfsynnmtoa.exe', 'bin/rh2ofast.exe', 'bin/rpredict.exe', 'bin/synbeg.exe']
+           'bin/spectrv.exe', 'bin/synthe.exe', 'bin/xnfpelsyn.exe', 'bin/rh2ofast.exe', 'bin/rpredict.exe', 'bin/synbeg.exe']
 
 # Check these files for MD5 hashes
 hash = {
