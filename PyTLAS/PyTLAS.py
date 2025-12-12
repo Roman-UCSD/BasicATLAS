@@ -381,6 +381,9 @@ def init_spectrv():
 
     This function loads the SPECTRV library and binds methods to push the XNFPELSYN/SYNTHE output into the library,
     to run SPECTRV, and to retrieve the emergent spectrum in standard units
+
+    The resulting SPECTRV object will also have the `mask` bound attribute (defaults to all True) which allows some
+    wavelength points to be skipped in the radiative transfer calculation
     
     Returns
     -------
@@ -440,6 +443,12 @@ def init_spectrv():
         pointer = self.asynth.ctypes.data_as(ctypes.c_void_p)
         self.set_asynth(pointer, self.meta['n_wl'])
 
+        # Create a mask array
+        self.mask = np.full(self.meta['n_wl'], True, order = 'F')
+        self.set_mask.argtypes = [ctypes.c_void_p, ctypes.c_int]
+        pointer = self.mask.ctypes.data_as(ctypes.c_void_p)
+        self.set_mask(pointer, self.meta['n_wl'])
+
         # Create an array to store the output spectrum
         self.spectrum = np.zeros([self.meta['n_wl'], 2], dtype = np.float64, order = 'F')
         self.set_spectrum.argtypes = [ctypes.c_void_p, ctypes.c_int]
@@ -472,9 +481,13 @@ def init_spectrv():
         numnu = ctypes.c_int.in_dll(self, 'numnu').value
         wl = 10 ** (np.log10(wbegin) + np.arange(numnu) * np.log10(1 + 1 / deltaw)) * 10
 
-        # Compute the intensities
-        flux = 4.0 * self.spectrum[:,0] * spc.c * 1e10 / (wl ** 2.0)
-        cont = 4.0 * self.spectrum[:,1] * spc.c * 1e10 / (wl ** 2.0)
+        # Compute the intensities and handle the mask
+        mask = self.mask.copy()
+        mask[0] = True
+        sl = [slice(1, None), slice(None, None)][int(self.mask[0])]
+        wl = wl[mask][sl]
+        flux = 4.0 * self.spectrum[:np.count_nonzero(mask),0][sl] * spc.c * 1e10 / (wl ** 2.0)
+        cont = 4.0 * self.spectrum[:np.count_nonzero(mask),1][sl] * spc.c * 1e10 / (wl ** 2.0)
 
         return wl, flux, cont, flux / cont
     lib.get_spectrum = types.MethodType(get_spectrum, lib)

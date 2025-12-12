@@ -36,6 +36,7 @@ module spectrv_wrapper
 
   real(c_float), pointer :: asynth(:,:) => null()
   real(c_double), pointer :: spectrum(:,:) => null()
+  logical(c_bool), pointer :: mask(:) => null()
 
   real(c_double), bind(c, name='wbegin') :: wbegin = 0.0
   real(c_double), bind(c, name='deltaw') :: deltaw = 0.0
@@ -66,6 +67,23 @@ contains
     call c_f_pointer(ptr_spectrum, spectrum, [n_wl,2])
 
   end subroutine set_spectrum
+
+  subroutine set_mask(ptr_mask, n_wl) bind(c)
+    use iso_c_binding
+    type(c_ptr),   value :: ptr_mask
+    integer(c_int), value :: n_wl
+
+    call c_f_pointer(ptr_mask, mask, [n_wl])
+
+  end subroutine set_mask
+
+  subroutine load_mask(idx, S_KEEP) bind(c, name="load_mask_")
+    use iso_c_binding
+    integer(c_int), intent(in)  :: idx
+    logical(c_bool), intent(out)  :: S_KEEP
+
+    S_KEEP = mask(idx)
+  end subroutine load_mask
 
   subroutine update_spectrum(idx, S_Q) bind(c, name="update_spectrum_")
     use iso_c_binding
